@@ -25,9 +25,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function ProjectsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,6 +90,10 @@ export default function ProjectsPage() {
     project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleRowClick = (projectId: string) => {
+    router.push(`/projects/${projectId}`);
+  };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -222,15 +228,8 @@ export default function ProjectsPage() {
             </TableHeader>
             <TableBody>
               {filteredProjects.map((project) => (
-                <TableRow key={project.id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{project.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {project.description}
-                      </div>
-                    </div>
-                  </TableCell>
+                <TableRow key={project.id} onClick={() => handleRowClick(project.id)} className="cursor-pointer">
+                  <TableCell className="font-medium">{project.name}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(project.status)}>
                       {project.status.toLowerCase().replace('_', ' ')}
@@ -255,28 +254,29 @@ export default function ProjectsPage() {
                     {(canUpdate || canDelete) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                            <Link href={`/projects/${project.id}`}>View Details</Link>
+                          </DropdownMenuItem>
                           {canUpdate && (
-                            <>
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/projects/${project.id}/edit`}>
-                                  Edit Project
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>Add Task</DropdownMenuItem>
-                            </>
+                            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                              <Link href={`/projects/${project.id}/edit`}>Edit</Link>
+                            </DropdownMenuItem>
                           )}
                           {canDelete && (
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDeleteProject(project.id)}
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProject(project.id);
+                              }}
+                              className="text-red-500"
                             >
-                              Delete Project
+                              Delete
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>

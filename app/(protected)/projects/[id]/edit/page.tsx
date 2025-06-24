@@ -105,13 +105,13 @@ export default function EditProjectPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
         <Link href="/projects">
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver a Proyectos
           </Button>
         </Link>
+      <div className="flex items-center space-x-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Editar Proyecto</h1>
           <p className="text-muted-foreground">Modifica los datos del proyecto</p>
