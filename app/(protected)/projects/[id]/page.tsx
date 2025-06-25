@@ -122,7 +122,7 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Progreso</CardTitle>
           </CardHeader>
@@ -132,7 +132,7 @@ export default function ProjectDetailPage() {
               <p className="text-sm text-muted-foreground">{tasksCompleted} de {totalTasks} tareas completadas.</p>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       <Card>

@@ -220,7 +220,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {userTasks.length > 0 && (
+      {/* {userTasks.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Task Completion Progress</CardTitle>
@@ -238,7 +238,7 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
     </div>
   );
 }
