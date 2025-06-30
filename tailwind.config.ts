@@ -20,6 +20,19 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       colors: {
+        palero: {
+          green1: '#46C14F',   // RGB 70 193 79
+          green2: '#045632',   // RGB 4 86 50
+          teal1: '#00B2A4',    // RGB 0 178 164
+          teal2: '#1ABAAC',    // RGB 26 186 176
+          blue1: '#39CCE0',    // RGB 57 204 224
+          blue2: '#03718C',    // RGB 3 113 140
+          blue3: '#098E95',    // RGB 9 118 149
+          navy1: '#05212F',    // RGB 5 33 47
+          navy2: '#053145',    // RGB 5 49 78
+          black1: '#081216',   // RGB 8 18 22
+          white: '#FFFFFF',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -32,20 +33,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-palero-blue1 via-palero-teal1 to-palero-blue2 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 rounded-xl bg-primary flex items-center justify-center mb-4">
-            <Building2 className="h-8 w-8 text-primary-foreground" />
+          <div className="mx-auto h-16 w-16 rounded-xl bg-palero-green1 flex items-center justify-center mb-4 shadow-lg">
+            <Image src="/images/LogoPalerosoft.jpg" width={64} height={64} alt="Logo" className="rounded-xl" />
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">Welcome to CRM Palerosoft</h2>
-          <p className="text-muted-foreground mt-2">Sign in to your account</p>
+          <h2 className="text-3xl font-bold tracking-tight text-palero-navy1">Welcome to CRM Palerosoft</h2>
+          <p className="text-palero-navy2 mt-2">Sign in to your account</p>
         </div>
 
-        <Card>
+        <Card className="bg-white/95 backdrop-blur-sm border-palero-blue1/30 shadow-xl">
           <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-palero-navy1">Sign In</CardTitle>
+            <CardDescription className="text-palero-navy2">
               Enter your credentials to access the CRM system
             </CardDescription>
           </CardHeader>
@@ -96,15 +97,15 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-palero-green1 hover:bg-palero-green2 text-white font-medium transition-colors" disabled={isLoading}>
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
 
             <div className="mt-4 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-palero-navy2">
                 Don&apos;t have an account?{' '}
-                <Link href="/register" className="text-primary hover:underline">
+                <Link href="/register" className="text-palero-teal1 hover:text-palero-teal2 font-medium transition-colors">
                   Register here
                 </Link>
               </p>
