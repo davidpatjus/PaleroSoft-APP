@@ -12,18 +12,19 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckSquare, Calendar, Users, FolderOpen, Target, AlertCircle, FileText } from 'lucide-react';
 
 const statusOptions = [
-  { value: 'TODO', label: 'Por hacer' },
-  { value: 'IN_PROGRESS', label: 'En progreso' },
-  { value: 'REVIEW', label: 'En revisión' },
-  { value: 'DONE', label: 'Hecha' },
+  { value: 'TODO', label: 'To Do' },
+  { value: 'IN_PROGRESS', label: 'In Progress' },
+  { value: 'REVIEW', label: 'Under Review' },
+  { value: 'DONE', label: 'Done' },
 ];
+
 const priorityOptions = [
-  { value: 'LOW', label: 'Baja' },
-  { value: 'MEDIUM', label: 'Media' },
-  { value: 'HIGH', label: 'Alta' },
+  { value: 'LOW', label: 'Low Priority' },
+  { value: 'MEDIUM', label: 'Medium Priority' },
+  { value: 'HIGH', label: 'High Priority' },
 ];
 
 export default function CreateTaskPage() {
@@ -52,7 +53,7 @@ export default function CreateTaskPage() {
         setProjects(projectsData);
         setUsers(usersData);
       } catch (e) {
-        setError('No se pudieron cargar los datos');
+        setError('Could not load data');
       }
     }
     fetchData();
@@ -73,31 +74,55 @@ export default function CreateTaskPage() {
         dueDate,
         assignedToId,
       });
-      setSuccess('¡Tarea creada exitosamente!');
+      setSuccess('Task created successfully!');
       setTimeout(() => {
         router.push('/tasks');
       }, 1500);
     } catch (err: any) {
-      setError(err.message || 'Error al crear la tarea.');
+      setError(err.message || 'Error creating task.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Solo admins y team members pueden crear tareas
+  // Only admins and team members can create tasks
   if (user?.role !== 'ADMIN' && user?.role !== 'TEAM_MEMBER') {
     return (
-      <div className="space-y-6">
-        <Alert variant="destructive">
-          <AlertDescription>No tienes permiso para acceder a esta página.</AlertDescription>
-        </Alert>
+      <div className="min-h-screen bg-gradient-to-br from-palero-blue1/5 via-white to-palero-green1/5 px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <Alert className="border-red-200 bg-red-50">
+            <AlertDescription className="text-red-700">You don&apos;t have permission to access this page.</AlertDescription>
+          </Alert>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
+    <div className="min-h-screen bg-gradient-to-br from-palero-blue1/5 via-white to-palero-green1/5 px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div className="min-w-0 flex-1">
+            <Link href="/tasks">
+              <Button variant="outline" size="sm" className="mb-4 border-palero-blue1/30 text-palero-blue1 hover:bg-palero-blue1/10 hover:text-palero-blue2">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Tasks
+              </Button>
+            </Link>
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-palero-blue1 to-palero-teal1 flex items-center justify-center shadow-lg">
+                <CheckSquare className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-palero-navy1">Create New Task</h1>
+                <p className="text-sm sm:text-base text-palero-navy2 mt-1">
+                  Add a new task to a project with all necessary details
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
         <Link href="/tasks">
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />

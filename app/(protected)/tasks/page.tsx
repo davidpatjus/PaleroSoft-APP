@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Calendar, CheckSquare, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Calendar, CheckSquare, Clock, AlertCircle, Loader2, Kanban, List, Target, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
 
@@ -27,28 +27,28 @@ export default function TasksPage() {
   const canDelete = hasPermission(user!.role, 'tasks', 'delete');
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [tasksData, usersData, projectsData] = await Promise.all([
+          apiClient.getTasks(),
+          user?.role === 'ADMIN' || user?.role === 'TEAM_MEMBER' ? apiClient.getUsers() : Promise.resolve([]),
+          apiClient.getProjects(),
+        ]);
+
+        setTasks(tasksData);
+        setUsers(usersData);
+        setProjects(projectsData);
+        setError('');
+      } catch (error: any) {
+        setError(error.message || 'Failed to fetch data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setIsLoading(true);
-      const [tasksData, usersData, projectsData] = await Promise.all([
-        apiClient.getTasks(),
-        user?.role === 'ADMIN' || user?.role === 'TEAM_MEMBER' ? apiClient.getUsers() : Promise.resolve([]),
-        apiClient.getProjects(),
-      ]);
-
-      setTasks(tasksData);
-      setUsers(usersData);
-      setProjects(projectsData);
-      setError('');
-    } catch (error: any) {
-      setError(error.message || 'Failed to fetch data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [user?.role]);
 
   // Filter tasks based on user role
   const getUserTasks = () => {
@@ -71,50 +71,69 @@ export default function TasksPage() {
 
   const getUserName = (userId?: string) => {
     if (!userId) return 'Unassigned';
-    const taskUser = users.find(u => u.id === userId);
-    return taskUser?.name || 'Unknown';
+    const taskUser = users.find((u: UserResponse) => u.id === userId);
+    return taskUser?.name || 'Unknown User';
   };
 
   const getProjectName = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
+    const project = projects.find((p: Project) => p.id === projectId);
     return project?.name || 'Unknown Project';
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'HIGH': return 'border-red-500 bg-red-50';
-      case 'MEDIUM': return 'border-yellow-500 bg-yellow-50';
-      case 'LOW': return 'border-green-500 bg-green-50';
-      default: return 'border-gray-200 bg-gray-50';
+      case 'HIGH': return 'border-red-500 bg-red-50/80 backdrop-blur-sm';
+      case 'MEDIUM': return 'border-palero-yellow1 bg-palero-yellow1/10 backdrop-blur-sm';
+      case 'LOW': return 'border-palero-green1 bg-palero-green1/10 backdrop-blur-sm';
+      default: return 'border-palero-navy2/30 bg-palero-navy2/5 backdrop-blur-sm';
+    }
+  };
+
+  const getPriorityColors = (priority: string) => {
+    switch (priority) {
+      case 'HIGH': return 'bg-red-500 text-white';
+      case 'MEDIUM': return 'bg-palero-yellow1 text-palero-navy1';
+      case 'LOW': return 'bg-palero-green1 text-white';
+      default: return 'bg-palero-navy2 text-white';
     }
   };
 
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case 'HIGH': return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'MEDIUM': return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'LOW': return <CheckSquare className="h-4 w-4 text-green-500" />;
-      default: return <CheckSquare className="h-4 w-4 text-gray-500" />;
+      case 'MEDIUM': return <Clock className="h-4 w-4 text-palero-yellow2" />;
+      case 'LOW': return <CheckSquare className="h-4 w-4 text-palero-green2" />;
+      default: return <CheckSquare className="h-4 w-4 text-palero-navy2" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'TODO': return 'border-gray-400 bg-gray-50';
-      case 'IN_PROGRESS': return 'border-blue-500 bg-blue-50';
-      case 'REVIEW': return 'border-yellow-500 bg-yellow-50';
-      case 'DONE': return 'border-green-500 bg-green-50';
-      default: return 'border-gray-200 bg-gray-50';
+      case 'TODO': return 'border-palero-navy2 bg-palero-navy2/10 backdrop-blur-sm';
+      case 'IN_PROGRESS': return 'border-palero-blue1 bg-palero-blue1/10 backdrop-blur-sm';
+      case 'REVIEW': return 'border-palero-teal1 bg-palero-teal1/10 backdrop-blur-sm';
+      case 'DONE': return 'border-palero-green1 bg-palero-green1/10 backdrop-blur-sm';
+      default: return 'border-palero-navy2/30 bg-palero-navy2/5 backdrop-blur-sm';
+    }
+  };
+
+  const getStatusColors = (status: string) => {
+    switch (status) {
+      case 'TODO': return 'bg-palero-navy2 text-white';
+      case 'IN_PROGRESS': return 'bg-palero-blue1 text-white';
+      case 'REVIEW': return 'bg-palero-teal1 text-white';
+      case 'DONE': return 'bg-palero-green1 text-white';
+      default: return 'bg-palero-navy2 text-white';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'TODO': return <Clock className="h-4 w-4 text-gray-500" />;
-      case 'IN_PROGRESS': return <AlertCircle className="h-4 w-4 text-blue-500" />;
-      case 'REVIEW': return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case 'DONE': return <CheckSquare className="h-4 w-4 text-green-500" />;
-      default: return <CheckSquare className="h-4 w-4 text-gray-500" />;
+      case 'TODO': return <Clock className="h-4 w-4 text-palero-navy2" />;
+      case 'IN_PROGRESS': return <AlertCircle className="h-4 w-4 text-palero-blue1" />;
+      case 'REVIEW': return <AlertCircle className="h-4 w-4 text-palero-teal1" />;
+      case 'DONE': return <CheckSquare className="h-4 w-4 text-palero-green1" />;
+      default: return <CheckSquare className="h-4 w-4 text-palero-navy2" />;
     }
   };
 
@@ -153,70 +172,80 @@ export default function TasksPage() {
   };
 
   const KanbanColumn = ({ title, status, tasks }: { title: string; status: string; tasks: Task[] }) => (
-    <div className="flex-1 min-w-80">
-      <Card>
-        <CardHeader className="pb-3">
+    <div className="w-full min-w-0 md:min-w-72 lg:min-w-80 md:flex-1">
+      <Card className="bg-white/90 backdrop-blur-sm border-palero-blue1/20 shadow-lg">
+        <CardHeader className="pb-3 px-3 sm:px-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">{title}</CardTitle>
-            <Badge variant="secondary">{tasks.length}</Badge>
+            <div className="flex items-center space-x-2">
+              {getStatusIcon(status)}
+              <CardTitle className="text-sm sm:text-base lg:text-lg text-palero-navy1">{title}</CardTitle>
+            </div>
+            <div className={`inline-flex items-center rounded-full px-2 py-1 text-xs sm:text-sm font-semibold ${getStatusColors(status)}`}>
+              {tasks.length}
+            </div>
           </div>
         </CardHeader>
         <CardContent
-          className="space-y-3 min-h-96"
+          className="space-y-3 min-h-48 md:min-h-80 lg:min-h-96 px-3 sm:px-6"
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, status)}
         >
-          {tasks.map((task) => (
+          {tasks.map((task: Task) => (
             <div
               key={task.id}
               draggable={canUpdate}
               onDragStart={() => handleDragStart(task.id)}
-              className={`p-4 border-l-4 rounded-lg cursor-move transition-all hover:shadow-md ${getStatusColor(task.status)}`}
+              className={`p-3 sm:p-4 border-l-4 rounded-lg cursor-move transition-all hover:shadow-lg hover:scale-[1.02] ${getStatusColor(task.status)}`}
             >
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex items-start justify-between">
-                  <h4 className="font-medium text-sm leading-tight">{task.title}</h4>
-                  {getStatusIcon(task.status)}
+                  <h4 className="font-semibold text-xs sm:text-sm leading-tight text-palero-navy1 line-clamp-2 flex-1 pr-2">
+                    {task.title}
+                  </h4>
+                  {getPriorityIcon(task.priority)}
                 </div>
                 
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className="text-xs text-palero-navy2 line-clamp-2">
                   {task.description}
                 </p>
 
-                <div className="flex items-center space-x-1">
-                  <Badge variant="outline" className="text-xs">
+                <div className="flex flex-wrap items-center gap-1">
+                  <div className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-palero-blue1/10 text-palero-blue2 border border-palero-blue1/20">
                     {getProjectName(task.projectId)}
-                  </Badge>
-                  <Badge variant={
-                    task.priority === 'HIGH' ? 'destructive' : 
-                    task.priority === 'MEDIUM' ? 'default' : 'secondary'
-                  } className="text-xs">
-                    {task.priority.toLowerCase()}
-                  </Badge>
+                  </div>
+                  <div className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${getPriorityColors(task.priority)}`}>
+                    {task.priority}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {getUserName(task.assignedToId).split(' ').map(n => n[0]).join('')}
+                    <Avatar className="h-5 w-5 sm:h-6 sm:w-6 border border-palero-blue1/20">
+                      <AvatarFallback className="bg-gradient-to-br from-palero-blue1 to-palero-teal1 text-white text-xs">
+                        {getUserName(task.assignedToId).split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-palero-navy2 truncate">
                       {getUserName(task.assignedToId)}
                     </span>
                   </div>
                   
-                  <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                  <div className="flex items-center space-x-1 text-xs text-palero-navy2">
                     <Calendar className="h-3 w-3" />
-                    <span>
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+                    <span className="truncate">
+                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
           ))}
+          {tasks.length === 0 && (
+            <div className="text-center py-6 sm:py-8 text-palero-navy2/70">
+              <div className="mb-2">{getStatusIcon(status)}</div>
+              <p className="text-xs sm:text-sm">No tasks in {title.toLowerCase()}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -224,168 +253,241 @@ export default function TasksPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-palero-blue1/30 border-t-palero-green1"></div>
+        <p className="text-palero-navy1 font-medium">Loading tasks...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-          <p className="text-muted-foreground">
-            Manage and track all your project tasks
-          </p>
-        </div>
-        {canCreate && (
-          <Link href="/tasks/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Task
-            </Button>
-          </Link>
-        )}
-      </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
-            <CheckSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{userTasks.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {getTasksByStatus('IN_PROGRESS').length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {getTasksByStatus('DONE').length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">High Priority</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {userTasks.filter(t => t.priority === 'HIGH').length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="kanban" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="kanban">Kanban Board</TabsTrigger>
-          <TabsTrigger value="list">List View</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="kanban" className="space-y-4">
-          <div className="flex gap-6 overflow-x-auto pb-4">
-            <KanbanColumn
-              title="To Do"
-              status="TODO"
-              tasks={getTasksByStatus('TODO')}
-            />
-            <KanbanColumn
-              title="In Progress"
-              status="IN_PROGRESS"
-              tasks={getTasksByStatus('IN_PROGRESS')}
-            />
-            <KanbanColumn
-              title="Review"
-              status="REVIEW"
-              tasks={getTasksByStatus('REVIEW')}
-            />
-            <KanbanColumn
-              title="Done"
-              status="DONE"
-              tasks={getTasksByStatus('DONE')}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="list" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Tasks</CardTitle>
-              <CardDescription>Complete list of your tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {userTasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <h4 className="font-medium">{task.title}</h4>
-                        {getPriorityIcon(task.priority)}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{task.description}</p>
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                        <span>Assigned to: {getUserName(task.assignedToId)}</span>
-                        <span>Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}</span>
-                        <span>Project: {getProjectName(task.projectId)}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={
-                        task.priority === 'HIGH' ? 'destructive' : 
-                        task.priority === 'MEDIUM' ? 'default' : 'secondary'
-                      }>
-                        {task.priority.toLowerCase()}
-                      </Badge>
-                      <Badge variant={task.status === 'DONE' ? 'default' : 'outline'}>
-                        {task.status.toLowerCase().replace('_', ' ')}
-                      </Badge>
-                      {canDelete && (
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteTask(task.id)}>
-                          Eliminar
-                        </Button>
-                      )}
-                      {canUpdate && (
-                        <Link href={`/tasks/${task.id}/edit`}>
-                          <Button variant="outline" size="sm">Editar</Button>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {userTasks.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No tasks found.
-                  </p>
-                )}
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+      <div className="w-full">
+        {/* Header Section */}
+        <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-palero-blue1 to-palero-teal1 flex items-center justify-center shadow-lg">
+                <CheckSquare className="h-5 w-5 text-white" />
               </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-palero-navy1">Tasks Management</h1>
+                <p className="text-sm sm:text-base text-palero-navy2 mt-1">
+                  Manage and track all your project tasks efficiently
+                </p>
+              </div>
+            </div>
+          </div>
+          {canCreate && (
+            <div className="flex-shrink-0">
+              <Link href="/tasks/create">
+                <Button className="bg-palero-green1 hover:bg-palero-green2 text-white w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="sm:hidden">New Task</span>
+                  <span className="hidden sm:inline">New Task</span>
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <Alert className="border-red-200 bg-red-50">
+            <AlertDescription className="text-red-700">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-2 lg:grid-cols-4 mt-4">
+          <Card className="border-palero-blue1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Total Tasks</CardTitle>
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-palero-blue1 to-palero-blue2 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                <CheckSquare className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-bold text-palero-blue2 mb-1">{userTasks.length}</div>
+              <p className="text-xs text-palero-navy2">assigned tasks</p>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+
+          <Card className="border-palero-yellow1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">In Progress</CardTitle>
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-palero-yellow1 to-palero-yellow2 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                <Clock className="h-3 w-3 sm:h-5 sm:w-5 text-palero-navy1" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-bold text-palero-blue1 mb-1">
+                {getTasksByStatus('IN_PROGRESS').length}
+              </div>
+              <p className="text-xs text-palero-navy2">currently active</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-palero-green1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Completed</CardTitle>
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-palero-green1 to-palero-green2 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                <CheckSquare className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-bold text-palero-green2 mb-1">
+                {getTasksByStatus('DONE').length}
+              </div>
+              <p className="text-xs text-palero-navy2">tasks finished</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-red-200 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">High Priority</CardTitle>
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-bold text-red-600 mb-1">
+                {userTasks.filter((t: Task) => t.priority === 'HIGH').length}
+              </div>
+              <p className="text-xs text-palero-navy2">urgent tasks</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs Section */}
+        <Card className="bg-white/90 backdrop-blur-sm border-palero-blue1/20 shadow-lg">
+          <CardContent className="p-6">
+            <Tabs defaultValue="kanban" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2 bg-palero-blue1/10">
+                <TabsTrigger 
+                  value="kanban" 
+                  className="data-[state=active]:bg-palero-blue1 data-[state=active]:text-white"
+                >
+                  <Kanban className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Kanban Board</span>
+                  <span className="sm:hidden">Board</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="list"
+                  className="data-[state=active]:bg-palero-blue1 data-[state=active]:text-white"
+                >
+                  <List className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">List View</span>
+                  <span className="sm:hidden">List</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="kanban" className="space-y-4">
+                <div className="flex flex-col gap-4 md:flex-row md:gap-6 md:overflow-x-auto pb-4">
+                  <KanbanColumn
+                    title="To Do"
+                    status="TODO"
+                    tasks={getTasksByStatus('TODO')}
+                  />
+                  <KanbanColumn
+                    title="In Progress"
+                    status="IN_PROGRESS"
+                    tasks={getTasksByStatus('IN_PROGRESS')}
+                  />
+                  <KanbanColumn
+                    title="Review"
+                    status="REVIEW"
+                    tasks={getTasksByStatus('REVIEW')}
+                  />
+                  <KanbanColumn
+                    title="Done"
+                    status="DONE"
+                    tasks={getTasksByStatus('DONE')}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="list" className="space-y-4">
+                <Card className="border-palero-blue1/20">
+                  <CardHeader>
+                    <div className="flex items-center space-x-3">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-palero-blue1 to-palero-teal1 flex items-center justify-center">
+                        <List className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-palero-navy1">All Tasks</CardTitle>
+                        <CardDescription className="text-palero-navy2">Complete list of your tasks</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {userTasks.map((task: Task) => (
+                        <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-palero-blue1/20 rounded-lg bg-gradient-to-r from-white to-palero-blue1/5 hover:shadow-md transition-all duration-200">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-start space-x-2">
+                              <h4 className="font-semibold text-palero-navy1 flex-1">{task.title}</h4>
+                              {getPriorityIcon(task.priority)}
+                            </div>
+                            <p className="text-sm text-palero-navy2 line-clamp-2">{task.description}</p>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-palero-navy2">
+                              <div className="flex items-center space-x-1">
+                                <Avatar className="h-4 w-4">
+                                  <AvatarFallback className="bg-gradient-to-br from-palero-blue1 to-palero-teal1 text-white text-xs">
+                                    {getUserName(task.assignedToId).split(' ').map((n: string) => n[0]).join('').slice(0, 1)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span>{getUserName(task.assignedToId)}</span>
+                              </div>
+                              <span>•</span>
+                              <span>Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US') : 'No due date'}</span>
+                              <span>•</span>
+                              <span>Project: {getProjectName(task.projectId)}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2 mt-3 sm:mt-0 sm:ml-4">
+                            <div className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getPriorityColors(task.priority)}`}>
+                              {task.priority}
+                            </div>
+                            <div className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusColors(task.status)}`}>
+                              {task.status.toLowerCase().replace('_', ' ')}
+                            </div>
+                            {canUpdate && (
+                              <Link href={`/tasks/${task.id}/edit`}>
+                                <Button variant="outline" size="sm" className="border-palero-blue1/30 text-palero-blue1 hover:bg-palero-blue1/10">
+                                  Edit
+                                </Button>
+                              </Link>
+                            )}
+                            {canDelete && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleDeleteTask(task.id)}
+                                className="border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                Delete
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {userTasks.length === 0 && (
+                        <div className="text-center py-12 px-4">
+                          <CheckSquare className="h-12 w-12 text-palero-blue1/50 mx-auto mb-4" />
+                          <p className="text-palero-navy2 font-medium">No tasks found</p>
+                          <p className="text-sm text-palero-navy2/70 mt-1">
+                            Tasks will appear here when created
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

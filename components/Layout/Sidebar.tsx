@@ -31,8 +31,8 @@ const navigationItems = [
   { name: 'Projects', href: '/projects', icon: FolderOpen, route: '/projects' },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, route: '/tasks' },
   { name: 'Calendar', href: '/calendar', icon: Calendar, route: '/calendar' },
-  { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
-  { name: 'Settings', href: '/settings', icon: Settings, route: '/settings' }
+  // { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
+  // { name: 'Settings', href: '/settings', icon: Settings, route: '/settings' }
 ];
 
 export function Sidebar() {
@@ -153,7 +153,7 @@ export function Sidebar() {
 
       {/* Desktop sidebar */}
       <div className="hidden md:fixed md:inset-y-0 md:flex w-auto md:flex-col">
-        <div className="flex flex-col border-r border-palero-blue1/20 shadow-xl">
+        <div className="flex flex-col border-r border-palero-blue1/20 shadow-xl h-full">
           <SidebarContent />
         </div>
       </div>
