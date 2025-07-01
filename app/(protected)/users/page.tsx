@@ -74,12 +74,16 @@ export default function UsersPage() {
     u.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getRoleBadgeVariant = (role: string) => {
+  const getRoleBadgeStyle = (role: string) => {
     switch (role) {
-      case 'ADMIN': return 'destructive';
-      case 'TEAM_MEMBER': return 'default';
-      case 'CLIENT': return 'secondary';
-      default: return 'secondary';
+      case 'ADMIN': 
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'TEAM_MEMBER': 
+        return 'bg-palero-blue1/10 text-palero-blue2 border-palero-blue1/20';
+      case 'CLIENT': 
+        return 'bg-palero-green1/10 text-palero-green2 border-palero-green1/20';
+      default: 
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -94,177 +98,311 @@ export default function UsersPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-96 space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-palero-blue1/30 border-t-palero-green1"></div>
+        <p className="text-palero-navy1 font-medium">Loading users...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground">
-            Manage your team members and their permissions
+    <div className="space-y-6 md:space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-palero-navy1">Users Management</h1>
+          <p className="text-sm sm:text-base text-palero-navy2 mt-1">
+            Manage your team members and their permissions across the system
           </p>
         </div>
         {canCreate && (
-          <Link href="/users/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add User
-            </Button>
-          </Link>
+          <div className="flex-shrink-0">
+            <Link href="/users/create">
+              <Button className="bg-palero-green1 hover:bg-palero-green2 text-white w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="sm:hidden">Add User</span>
+                <span className="hidden sm:inline">Add User</span>
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert className="border-red-200 bg-red-50 text-red-800">
+          <AlertDescription className="text-red-700">{error}</AlertDescription>
         </Alert>
       )}
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+      {/* Stats Grid */}
+      <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-2 lg:grid-cols-4">
+        <Card className="border-palero-blue1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Total Users</CardTitle>
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-palero-blue1 to-palero-blue2 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+              <Mail className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-xl sm:text-3xl font-bold text-palero-blue2 mb-1">{users.length}</div>
+            <p className="text-xs text-palero-navy2">registered users</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admins</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {users.filter(u => u.role === 'ADMIN').length}
+
+        <Card className="border-red-200 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Admins</CardTitle>
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+              <Plus className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
             </div>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-xl sm:text-3xl font-bold text-red-600 mb-1">
+              {users.filter((u: UserResponse) => u.role === 'ADMIN').length}
+            </div>
+            <p className="text-xs text-palero-navy2">system administrators</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {users.filter(u => u.role === 'TEAM_MEMBER').length}
+
+        <Card className="border-palero-teal1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Team Members</CardTitle>
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-palero-teal1 to-palero-teal2 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+              <Calendar className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
             </div>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-xl sm:text-3xl font-bold text-palero-teal2 mb-1">
+              {users.filter((u: UserResponse) => u.role === 'TEAM_MEMBER').length}
+            </div>
+            <p className="text-xs text-palero-navy2">active team members</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clients</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {users.filter(u => u.role === 'CLIENT').length}
+
+        <Card className="border-palero-green1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Clients</CardTitle>
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-palero-green1 to-palero-green2 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+              <Plus className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
             </div>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-xl sm:text-3xl font-bold text-palero-green2 mb-1">
+              {users.filter((u: UserResponse) => u.role === 'CLIENT').length}
+            </div>
+            <p className="text-xs text-palero-navy2">external clients</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      {/* Users Table */}
+      <Card className="bg-white/80 backdrop-blur-sm border-palero-blue1/20">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <div>
-              <CardTitle>Team Members</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-palero-navy1">Team Members</CardTitle>
+              <CardDescription className="text-palero-navy2">
                 {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} found
               </CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="flex items-center">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-palero-navy2/70" />
                 <Input
                   placeholder="Search users..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full border-palero-blue1/30 focus:border-palero-teal1 focus:ring-palero-teal1"
                 />
               </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((userItem) => (
-                <TableRow key={userItem.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
-                        <AvatarFallback>
-                          {userItem.name.split(' ').map(n => n[0]).join('')}
+        <CardContent className="p-0 sm:p-6">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-palero-blue1/20">
+                  <TableHead className="text-palero-navy1 font-semibold">User</TableHead>
+                  <TableHead className="text-palero-navy1 font-semibold">Role</TableHead>
+                  <TableHead className="text-palero-navy1 font-semibold">Created</TableHead>
+                  <TableHead className="text-palero-navy1 font-semibold">Updated</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((userItem: UserResponse) => (
+                  <TableRow key={userItem.id} className="group hover:bg-palero-blue1/5 border-palero-blue1/10">
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-10 w-10 border-2 border-palero-blue1/20">
+                          <AvatarFallback className="bg-gradient-to-br from-palero-teal1 to-palero-blue1 text-white font-semibold">
+                            {userItem.name.split(' ').map((n: string) => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-semibold text-palero-navy1 group-hover:text-palero-teal2 transition-colors">
+                            {userItem.name}
+                          </div>
+                          <div className="text-sm text-palero-navy2 flex items-center">
+                            <Mail className="mr-1 h-3 w-3" />
+                            {userItem.email}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getRoleBadgeStyle(userItem.role)}`}>
+                        {getRoleDisplayName(userItem.role)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center text-sm text-palero-navy2">
+                        <Calendar className="mr-1 h-3 w-3" />
+                        {new Date(userItem.createdAt).toLocaleDateString('en-US')}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center text-sm text-palero-navy2">
+                        <Calendar className="mr-1 h-3 w-3" />
+                        {new Date(userItem.updatedAt).toLocaleDateString('en-US')}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {(canUpdate || canDelete) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="hover:bg-palero-teal1/10 hover:text-palero-teal2">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="border-palero-blue1/20">
+                            {canUpdate && (
+                              <Link href={`/users/${userItem.id}/edit`}>
+                                <DropdownMenuItem className="hover:bg-palero-teal1/10 hover:text-palero-teal2">
+                                  Edit User
+                                </DropdownMenuItem>
+                              </Link>
+                            )}
+                            {canDelete && userItem.id !== user?.id && (
+                              <DropdownMenuItem 
+                                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                                onClick={() => handleDeleteUser(userItem.id)}
+                              >
+                                Delete User
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4 p-4">
+            {filteredUsers.map((userItem: UserResponse) => (
+              <Card key={userItem.id} className="group border-palero-blue1/20 hover:border-palero-teal1/30 hover:shadow-md transition-all duration-200 bg-gradient-to-r from-white to-palero-blue1/5">
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    {/* User Info */}
+                    <div className="flex items-start space-x-3">
+                      <Avatar className="h-12 w-12 border-2 border-palero-blue1/20 flex-shrink-0">
+                        <AvatarFallback className="bg-gradient-to-br from-palero-teal1 to-palero-blue1 text-white font-semibold">
+                          {userItem.name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="font-medium">{userItem.name}</div>
-                        <div className="text-sm text-muted-foreground flex items-center">
-                          <Mail className="mr-1 h-3 w-3" />
-                          {userItem.email}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-palero-navy1 group-hover:text-palero-teal2 transition-colors truncate">
+                          {userItem.name}
+                        </div>
+                        <div className="text-sm text-palero-navy2 flex items-center mt-1">
+                          <Mail className="mr-1 h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{userItem.email}</span>
+                        </div>
+                      </div>
+                      {(canUpdate || canDelete) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="hover:bg-palero-teal1/10 hover:text-palero-teal2 flex-shrink-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="border-palero-blue1/20">
+                            {canUpdate && (
+                              <Link href={`/users/${userItem.id}/edit`}>
+                                <DropdownMenuItem className="hover:bg-palero-teal1/10 hover:text-palero-teal2">
+                                  Edit User
+                                </DropdownMenuItem>
+                              </Link>
+                            )}
+                            {canDelete && userItem.id !== user?.id && (
+                              <DropdownMenuItem 
+                                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                                onClick={() => handleDeleteUser(userItem.id)}
+                              >
+                                Delete User
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+
+                    {/* Role and Dates */}
+                    <div className="flex flex-col space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-palero-navy2">Role:</span>
+                        <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getRoleBadgeStyle(userItem.role)}`}>
+                          {getRoleDisplayName(userItem.role)}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-palero-navy2 font-medium block mb-1">Created:</span>
+                          <div className="flex items-center text-palero-navy2">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            {new Date(userItem.createdAt).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              year: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <span className="text-palero-navy2 font-medium block mb-1">Updated:</span>
+                          <div className="flex items-center text-palero-navy2">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            {new Date(userItem.updatedAt).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              year: '2-digit'
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(userItem.role)}>
-                      {getRoleDisplayName(userItem.role)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="mr-1 h-3 w-3" />
-                      {new Date(userItem.createdAt).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="mr-1 h-3 w-3" />
-                      {new Date(userItem.updatedAt).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {(canUpdate || canDelete) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canUpdate && (
-                            <Link href={`/users/${userItem.id}/edit`}>
-                              <DropdownMenuItem>Edit User</DropdownMenuItem>
-                            </Link>
-                          )}
-                          {canDelete && userItem.id !== user?.id && (
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDeleteUser(userItem.id)}
-                            >
-                              Delete User
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-12 px-4">
+              <Mail className="h-12 w-12 text-palero-blue1/50 mx-auto mb-4" />
+              <p className="text-palero-navy2 font-medium">No users found</p>
+              <p className="text-sm text-palero-navy2/70 mt-1">
+                {searchTerm ? 'Try adjusting your search criteria' : 'Users will appear here when added'}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
