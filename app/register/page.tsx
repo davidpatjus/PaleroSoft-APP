@@ -52,7 +52,7 @@ export default function RegisterPage() {
           <div className="mx-auto h-16 w-16 rounded-xl bg-palero-green1 flex items-center justify-center mb-4 shadow-lg">
             <Image src="/images/LogoPalerosoft.jpg" width={64} height={64} alt="Logo" className="rounded-xl" />
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-palero-navy1">Join CRM Palerosoft</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-palero-navy1">Join CRM PeleroSoft</h2>
           <p className="text-palero-navy2 mt-2">Create your account to get started</p>
         </div>
 

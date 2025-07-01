@@ -298,7 +298,7 @@ export default function TasksPage() {
         )}
 
         {/* Stats Grid */}
-        <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-2 lg:grid-cols-4 mt-4">
+        <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-2 lg:grid-cols-4 mt-4 mb-4">
           <Card className="border-palero-blue1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
               <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Total Tasks</CardTitle>

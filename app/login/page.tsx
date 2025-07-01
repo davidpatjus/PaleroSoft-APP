@@ -39,7 +39,7 @@ export default function LoginPage() {
           <div className="mx-auto h-16 w-16 rounded-xl bg-palero-green1 flex items-center justify-center mb-4 shadow-lg">
             <Image src="/images/LogoPalerosoft.jpg" width={64} height={64} alt="Logo" className="rounded-xl" />
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-palero-navy1">Welcome to CRM Palerosoft</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-palero-navy1">Welcome to CRM PeleroSoft</h2>
           <p className="text-palero-navy2 mt-2">Sign in to your account</p>
         </div>
 

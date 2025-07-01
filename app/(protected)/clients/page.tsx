@@ -85,18 +85,19 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+    <div className="responsive-container">
+      <div className="space-y-4 sm:space-y-6 lg:space-y-8 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-full overflow-hidden">
       {/* Header Section */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-palero-navy1">Clients Management</h1>
-          <p className="text-sm sm:text-base text-palero-navy2 mt-1">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-palero-navy1 break-words">Clients Management</h1>
+          <p className="text-sm sm:text-base text-palero-navy2 mt-1 break-words">
             Manage your client relationships and business accounts
           </p>
         </div>
         {canCreate && (
-          <div className="flex-shrink-0">
-            <Link href="/users/create">
+          <div className="flex-shrink-0 w-full sm:w-auto">
+            <Link href="/clients/create" className="block w-full sm:w-auto">
               <Button className="bg-palero-green1 hover:bg-palero-green2 text-white w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 <span className="sm:hidden">Add Client</span>
@@ -192,14 +193,14 @@ export default function ClientsPage() {
                 {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} found
               </CardDescription>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center w-full sm:w-auto">
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-palero-navy2/70" />
                 <Input
                   placeholder="Search clients..."
                   value={searchTerm}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full border-palero-green1/30 focus:border-palero-teal1 focus:ring-palero-teal1"
+                  className="pl-10 w-full border-palero-green1/30 focus:border-palero-teal1 focus:ring-palero-teal1 min-w-0"
                 />
               </div>
             </div>
@@ -207,8 +208,9 @@ export default function ClientsPage() {
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
           {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
-            <Table>
+          <div className="hidden md:block">
+            <div className="overflow-x-auto max-w-full">
+              <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="border-palero-green1/20">
                   <TableHead className="text-palero-navy1 font-semibold">Client</TableHead>
@@ -298,6 +300,7 @@ export default function ClientsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
 
           {/* Mobile Card View */}
@@ -406,6 +409,7 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

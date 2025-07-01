@@ -106,9 +106,10 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-      {/* Header Section */}
-      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+    <div className="responsive-container">
+      <div className="space-y-4 sm:space-y-6 lg:space-y-8 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-full overflow-hidden">
+        {/* Header Section */}
+        <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div className="min-w-0 flex-1">
           <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold tracking-tight text-palero-navy1 break-words">
             Users Management
@@ -206,14 +207,14 @@ export default function UsersPage() {
                 {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} found
               </CardDescription>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center w-full sm:w-auto">
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-palero-navy2/70" />
                 <Input
                   placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full border-palero-blue1/30 focus:border-palero-teal1 focus:ring-palero-teal1"
+                  className="pl-10 w-full border-palero-blue1/30 focus:border-palero-teal1 focus:ring-palero-teal1 min-w-0"
                 />
               </div>
             </div>
@@ -221,8 +222,9 @@ export default function UsersPage() {
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
           {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
-            <Table>
+          <div className="hidden md:block">
+            <div className="overflow-x-auto max-w-full">
+              <Table>
               <TableHeader>
                 <TableRow className="border-palero-blue1/20">
                   <TableHead className="text-palero-navy1 font-semibold">User</TableHead>
@@ -302,10 +304,12 @@ export default function UsersPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
 
           {/* Mobile Card View */}
-          <div className="md:hidden space-y-4 p-4">
+          <div className="md:hidden">
+            <div className="space-y-4 p-4 max-w-full overflow-hidden">
             {filteredUsers.map((userItem: UserResponse) => (
               <Card key={userItem.id} className="group border-palero-blue1/20 hover:border-palero-teal1/30 hover:shadow-md transition-all duration-200 bg-gradient-to-r from-white to-palero-blue1/5">
                 <CardContent className="p-4">
@@ -393,6 +397,7 @@ export default function UsersPage() {
                 </CardContent>
               </Card>
             ))}
+            </div>
           </div>
           
           {filteredUsers.length === 0 && (
@@ -406,6 +411,7 @@ export default function UsersPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
