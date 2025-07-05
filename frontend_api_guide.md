@@ -1,6 +1,9 @@
 # Guía de Endpoints API para Frontend - CRM PaleroSoft
 
-Este documento detalla los endpoints de la API backend que el equipo de frontend necesitará para desarrollar las funcionalidades del CRM PaleroSoft, basándose en los tickets definidos en `tickets_frontend_crm.md` y el estado actual de la API y sus servicios, y el `schema.ts`.
+**Versión:** 2.0
+**Última Actualización:** 2025-07-05
+
+Este documento detalla los endpoints de la API backend que el equipo de frontend necesitará para desarrollar las funcionalidades del CRM PaleroSoft. Está alineado con los tickets de `tickets_frontend_crm.md`, el `schema.ts` de la base de datos y la implementación actual de los servicios de NestJS.
 
 ---
 
@@ -10,16 +13,13 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
 
 #### 1. Registro de Usuario
 - **Endpoint:** `POST /auth/register`
-- **Descripción:** Registra un nuevo usuario en el sistema.
+- **Descripción:** Registra un nuevo usuario. Por defecto, los usuarios registrados a través de este endpoint se asignan al rol `CLIENT` y se les crea un perfil de cliente (`client_profiles`) asociado con un estado inicial de `PROSPECT`.
 - **Cuerpo de la Solicitud (`RegisterAuthDto`):
   ```json
   {
     "fullName": "Nombre Completo Apellido",
     "email": "user@example.com",
     "password": "password123"
-    // El 'role' se asigna por defecto a 'CLIENT' en UsersService.
-    // RegisterAuthDto de AuthService no toma 'role'.
-    // UsersService.create lo usa si se le pasa, pero AuthService no lo hace.
   }
   ```
 - **Respuesta Exitosa (201 CREATED - `AuthResponse`):
@@ -27,16 +27,15 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
   {
     "user": {
       "id": "uuid-del-usuario",
-      "fullName": "Nombre Completo Apellido", // Mapeado desde user.name por AuthService
+      "fullName": "Nombre Completo Apellido",
       "email": "user@example.com",
       "createdAt": "timestamp",
       "updatedAt": "timestamp"
-      // El rol no se devuelve explícitamente en este objeto user de AuthService
     },
     "accessToken": "jwt.token.aqui"
   }
   ```
-- **Notas:** El token JWT debe guardarse. `AuthService` mapea `user.name` (de la DB) a `fullName` en la respuesta.
+- **Notas Técnicas:** El `AuthService` mapea el campo `fullName` del DTO al campo `name` en la entidad `usersTable`. El token JWT debe ser almacenado por el cliente y enviado en las cabeceras de las solicitudes subsecuentes.
 
 #### 2. Inicio de Sesión
 - **Endpoint:** `POST /auth/login`
@@ -53,11 +52,10 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
   {
     "user": {
       "id": "uuid-del-usuario",
-      "fullName": "Nombre Completo Apellido", // Mapeado desde user.name por AuthService
+      "fullName": "Nombre Completo Apellido",
       "email": "user@example.com",
       "createdAt": "timestamp",
       "updatedAt": "timestamp"
-      // El rol no se devuelve explícitamente en este objeto user de AuthService
     },
     "accessToken": "jwt.token.aqui"
   }
@@ -72,14 +70,13 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
   {
     "id": "uuid-del-usuario",
     "email": "user@example.com",
-    "name": "Nombre Completo Apellido", // Campo 'name' de la tabla users
-    "role": "CLIENT", // O 'ADMIN', 'TEAM_MEMBER' según el usuario
+    "name": "Nombre Completo Apellido",
+    "role": "CLIENT",
     "createdAt": "timestamp",
     "updatedAt": "timestamp"
-    // No incluye la contraseña. El campo isActive no existe en usersTable.
   }
   ```
-- **Notas:** Esta respuesta proviene de `UsersService` y sí incluye el `name` y `role` reales de la base de datos.
+- **Notas Técnicas:** Este endpoint es crucial para obtener el estado de autenticación del usuario, incluyendo su rol, que determinará los permisos y vistas en el frontend. La respuesta es generada por `UsersService` y no incluye campos sensibles como la contraseña.
 
 ---
 
@@ -136,7 +133,7 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
     }
   ]
   ```
-- **Notas:** Actualmente, el endpoint base `GET /projects` devuelve todos los proyectos. El filtrado específico (por estado, cliente, búsqueda) deberá implementarse en el frontend si es necesario sobre la data completa, o solicitarse como mejora al backend.
+- **Notas Técnicas:** Actualmente, el endpoint base `GET /projects` devuelve todos los proyectos. El filtrado específico (por estado, cliente, búsqueda) deberá implementarse en el frontend si es necesario sobre la data completa, o solicitarse como mejora al backend.
 
 #### 3. Obtener Detalles de un Proyecto
 - **Endpoint:** `GET /projects/:id`
@@ -183,11 +180,12 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
 
 #### 5. Eliminar Proyecto
 - **Endpoint:** `DELETE /projects/:id`
-- **Descripción:** Elimina un proyecto (puede ser soft delete).
+- **Descripción:** Elimina un proyecto de forma permanente (hard delete).
 - **Autenticación:** Requerida.
 - **Parámetros de Ruta:**
     - `id`: UUID del proyecto.
-- **Respuesta Exitosa (204 No Content o similar):** No devuelve cuerpo.
+- **Respuesta Exitosa (204 No Content):** No devuelve cuerpo.
+- **Notas Técnicas:** La eliminación de un proyecto puede tener efectos en cascada sobre entidades relacionadas, como tareas (`onDelete: 'CASCADE'`).
 
 ### Tareas (`/tasks`)
 
@@ -237,7 +235,7 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
     }
   ]
   ```
-- **Notas:** Actualmente, `GET /tasks` devuelve todas las tareas. El filtrado (por proyecto, estado, asignado) deberá realizarse en el frontend con los datos obtenidos o solicitarse como mejora al backend para implementarlo vía query params.
+- **Notas Técnicas:** Actualmente, `GET /tasks` devuelve todas las tareas. El filtrado (por proyecto, estado, asignado) deberá realizarse en el frontend con los datos obtenidos o solicitarse como mejora al backend para implementarlo vía query params.
 
 #### 3. Obtener Detalles de una Tarea
 - **Endpoint:** `GET /tasks/:id`
@@ -290,11 +288,11 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
 
 #### 5. Eliminar Tarea
 - **Endpoint:** `DELETE /tasks/:id`
-- **Descripción:** Elimina una tarea.
+- **Descripción:** Elimina una tarea de forma permanente.
 - **Autenticación:** Requerida.
 - **Parámetros de Ruta:**
     - `id`: UUID de la tarea.
-- **Respuesta Exitosa (204 No Content o similar):** No devuelve cuerpo.
+- **Respuesta Exitosa (204 No Content):** No devuelve cuerpo.
 
 ### Subtareas (`/subtasks`)
 
@@ -321,7 +319,7 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
 - **Descripción:** Obtiene una lista de todas las subtareas.
 - **Autenticación:** Requerida.
 - **Respuesta:** `Subtask[]`
-- **Notas:** Para obtener subtareas de una tarea específica, el frontend necesitará filtrar la lista completa por `taskId` o solicitar una mejora al backend para un endpoint como `GET /tasks/:taskId/subtasks` o `GET /subtasks?taskId=uuid-de-la-tarea-padre`.
+- **Notas Técnicas:** Para obtener subtareas de una tarea específica, el frontend necesitará filtrar la lista completa por `taskId` o solicitar una mejora al backend para un endpoint como `GET /tasks/:taskId/subtasks` o `GET /subtasks?taskId=uuid-de-la-tarea-padre`.
 
 #### 3. Obtener Subtarea
 - **Endpoint:** `GET /subtasks/:id`
@@ -347,6 +345,7 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
 
 #### 5. Eliminar Subtarea
 - **Endpoint:** `DELETE /subtasks/:id`
+- **Descripción:** Elimina una subtarea de forma permanente.
 - **Respuesta:** 204 No Content
 
 ### Comentarios (`/comments`)
@@ -371,7 +370,7 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
 - **Descripción:** Obtiene una lista de todos los comentarios.
 - **Autenticación:** Requerida.
 - **Respuesta:** `Comment[]`
-- **Notas:** Para obtener comentarios de una tarea o proyecto específico, el frontend necesitará filtrar la lista completa por `taskId` o `projectId` o solicitar una mejora al backend para un endpoint como `GET /tasks/:taskId/comments` o `GET /comments?taskId=uuid-task`.
+- **Notas Técnicas:** Para obtener comentarios de una tarea o proyecto específico, el frontend necesitará filtrar la lista completa por `taskId` o `projectId` o solicitar una mejora al backend para un endpoint como `GET /tasks/:taskId/comments` o `GET /comments?taskId=uuid-task`.
 
 #### 3. Obtener Comentario
 - **Endpoint:** `GET /comments/:id`
@@ -393,136 +392,271 @@ Este documento detalla los endpoints de la API backend que el equipo de frontend
 
 #### 5. Eliminar Comentario
 - **Endpoint:** `DELETE /comments/:id`
+- **Descripción:** Elimina un comentario de forma permanente.
 - **Respuesta:** 204 No Content
 
 ---
 
 ## Módulo 2: Gestión de Clientes (CRM) (FRONT-008, FRONT-009)
 
-### Clientes (Gestionados a través de `/users`)
+### Clientes (`/clients`)
 
-*Actualmente, no existe un `ClientsController` dedicado. La gestión de clientes se realiza a través del `UsersController` existente, identificando a los clientes por su rol. Cuando un usuario con rol 'CLIENT' es creado vía `POST /users` o `POST /auth/register` (que internamente usa `UsersService.create`), un `ClientProfile` básico es creado automáticamente con `status: 'PROSPECT'`.*
+La gestión de clientes se centraliza en este módulo, que interactúa con las tablas `users` y `client_profiles`. **Todos los endpoints de este módulo requieren autenticación JWT.**
 
-#### 1. Crear Cliente (Usuario con rol "cliente")
-- **Endpoint:** `POST /users`
-- **Descripción:** Crea un nuevo usuario. Si el rol es 'CLIENT' (o se omite, ya que es el default en `UsersService`), se crea también un perfil de cliente básico (`status: 'PROSPECT'`).
-- **Cuerpo de la Solicitud (`CreateUserDto`):
+#### 1. Crear Perfil de Cliente (para un usuario existente)
+- **Endpoint:** `POST /clients`
+- **Descripción:** Crea un perfil de cliente para un usuario que ya existe en el sistema y tiene el rol `CLIENT`. Este endpoint es ideal para ser usado por administradores.
+- **Autenticación:** Requerida (JWT).
+- **Cuerpo de la Solicitud (`CreateClientDto`):
   ```json
   {
-    "email": "cliente@example.com",
-    "password": "securepassword",
-    "fullName": "Empresa Cliente SA de CV", // Se guarda en el campo 'name' en la tabla users
-    "role": "CLIENT" // Valores de userRoleEnum: 'ADMIN', 'TEAM_MEMBER', 'CLIENT'. Opcional, por defecto 'CLIENT' en UsersService.
+    "userId": "uuid-del-usuario-existente", // Requerido
+    "companyName": "Nombre de la Empresa", // Opcional
+    "contactPerson": "Persona de Contacto", // Opcional
+    "phone": "+123456789", // Opcional
+    "address": "Dirección Completa", // Opcional
+    "socialMediaLinks": { // Opcional
+      "linkedin": "https://linkedin.com/company/...",
+      "twitter": "https://twitter.com/..."
+    }
   }
   ```
-- **Respuesta Exitosa (201 CREATED - `UserResponse`):
+- **Respuesta Exitosa (201 CREATED - `ClientProfile`):** Devuelve el perfil del cliente creado.
   ```json
   {
-    "id": "uuid-del-cliente",
-    "email": "cliente@example.com",
-    "name": "Empresa Cliente SA de CV",
-    "role": "CLIENT",
-    // isActive no existe en la tabla users
+    "id": "uuid-del-perfil-cliente",
+    "userId": "uuid-del-usuario-existente",
+    "companyName": "Nombre de la Empresa",
+    "contactPerson": "Persona de Contacto",
+    "phone": "+123456789",
+    "address": "Dirección Completa",
+    "socialMediaLinks": {
+      "linkedin": "https://linkedin.com/company/...",
+      "twitter": "https://twitter.com/..."
+    },
+    "status": "ACTIVE",
     "createdAt": "timestamp",
     "updatedAt": "timestamp"
-    // No incluye contraseña
   }
   ```
 
-#### 2. Listar Clientes (Usuarios con rol "cliente")
-- **Endpoint:** `GET /users`
-- **Descripción:** Obtiene una lista de todos los usuarios. El frontend deberá filtrar localmente aquellos usuarios que tengan `role === 'cliente'`.
-- **Autenticación:** Requerida (probablemente rol admin/gestor).
-- **Respuesta Exitosa (200 OK - `UserResponse[]`):
+#### 2. Listar Clientes
+- **Endpoint:** `GET /clients`
+- **Descripción:** Obtiene una lista de todos los perfiles de clientes.
+- **Autenticación:** Requerida (JWT).
+- **Respuesta Exitosa (200 OK - `ClientProfile[]`):
   ```json
   [
     {
-      "id": "uuid-cliente-1",
-      "name": "Cliente Uno",
-      "role": "CLIENT", // Corregido de "cliente" a "CLIENT"
-      // ...
-    },
-    {
-      "id": "uuid-gestor-1",
-      "name": "Gestor Principal",
-      "role": "TEAM_MEMBER", // Asumiendo un rol válido, corregido de "gestor"
-      // ...
+      "id": "uuid-perfil-1",
+      "userId": "uuid-usuario-1",
+      "companyName": "Cliente Uno Corp",
+      "status": "ACTIVE",
+      // ...otros campos del perfil
     }
   ]
   ```
-- **Notas:** El backend no ofrece actualmente un filtrado por rol en `GET /users`. El frontend debe realizar este filtro.
 
 #### 3. Obtener Detalles de un Cliente
-- **Endpoint:** `GET /users/:id`
-- **Descripción:** Obtiene los detalles de un usuario/cliente específico.
-- **Autenticación:** Requerida.
+- **Endpoint:** `GET /clients/:id`
+- **Descripción:** Obtiene el perfil completo de un cliente por el **ID de su perfil**.
+- **Autenticación:** Requerida (JWT).
 - **Parámetros de Ruta:**
-    - `id`: UUID del usuario/cliente.
-- **Respuesta Exitosa (200 OK - `UserResponse`):
+    - `id`: UUID del `client_profile`.
+- **Respuesta Exitosa (200 OK - `ClientProfile`):** Similar a la respuesta de creación.
+
+#### 4. Actualizar Perfil de Cliente
+- **Endpoint:** `PATCH /clients/:id`
+- **Descripción:** Actualiza los datos del perfil de un cliente por el **ID de su perfil**.
+- **Autenticación:** Requerida (JWT).
+- **Parámetros de Ruta:**
+    - `id`: UUID del `client_profile`.
+- **Cuerpo de la Solicitud (`UpdateClientDto`):** (Campos opcionales)
   ```json
   {
-    "id": "uuid-del-cliente",
-    "name": "Empresa Cliente SA de CV",
-    "role": "CLIENT",
-    // "isActive": true, // Eliminado, no existe en usersTable
+    "companyName": "Nuevo Nombre Comercial",
+    "contactPerson": "Nuevo Contacto",
+    "phone": "+0987654321",
+    "address": "Nueva Dirección",
+    "socialMediaLinks": { "website": "https://new-website.com" }
+  }
+  ```
+- **Respuesta Exitosa (200 OK - `ClientProfile`):** Devuelve el perfil completo actualizado.
+
+#### 5. Eliminar Perfil de Cliente
+- **Endpoint:** `DELETE /clients/:id`
+- **Descripción:** Elimina un perfil de cliente por el **ID de su perfil**. No elimina al usuario asociado.
+- **Autenticación:** Requerida (JWT).
+- **Parámetros de Ruta:**
+    - `id`: UUID del `client_profile`.
+- **Respuesta Exitosa (200 OK):
+  ```json
+  {
+    "message": "Perfil de cliente eliminado correctamente."
+  }
+  ```
+
+#### 6. Obtener Perfil por ID de Usuario
+- **Endpoint:** `GET /clients/profile/by-user/:userId`
+- **Descripción:** Obtiene el perfil de cliente asociado a un ID de usuario específico. Útil para que un cliente obtenga su propio perfil.
+- **Autenticación:** Requerida (JWT).
+- **Parámetros de Ruta:**
+    - `userId`: UUID del `user`.
+- **Respuesta Exitosa (200 OK - `ClientProfile`):** Devuelve el perfil del cliente.
+
+#### 7. Completar Perfil de Cliente (para el propio usuario)
+- **Endpoint:** `POST /clients/profile/by-user/:userId`
+- **Descripción:** Permite a un usuario con rol `CLIENT` que no tiene perfil, crear el suyo. Falla si el perfil ya existe.
+- **Autenticación:** Requerida (JWT).
+- **Parámetros de Ruta:**
+    - `userId`: UUID del `user` que está completando su perfil.
+- **Cuerpo de la Solicitud (`CompleteClientProfileDto`):
+  ```json
+  {
+    "companyName": "Mi Empresa S.A.", // Requerido
+    "contactPerson": "Yo Mismo", // Opcional
+    "phone": "+54911...", // Opcional
+    "address": "Calle Falsa 123", // Opcional
+    "socialMediaLinks": {} // Opcional
+  }
+  ```
+- **Respuesta Exitosa (201 CREATED - `ClientProfile`):** Devuelve el perfil recién creado.
+
+---
+
+## Módulo 3: Facturación y Pagos (FRONT-010, FRONT-011)
+
+### Facturas (`/invoices`)
+
+Este módulo gestiona la creación, visualización y seguimiento de facturas. **Todos los endpoints de este módulo requieren autenticación JWT.**
+
+#### 1. Crear Factura
+- **Endpoint:** `POST /invoices`
+- **Descripción:** Crea una nueva factura. El backend asigna automáticamente un `invoiceNumber` secuencial y único, calcula el `totalAmount` y establece el `status` inicial en `DRAFT`.
+- **Autenticación:** Requerida.
+- **Cuerpo de la Solicitud (`CreateInvoiceDto`):
+  ```json
+  {
+    "clientId": "uuid-del-cliente", // Requerido
+    "projectId": "uuid-del-proyecto", // Opcional
+    "issueDate": "2025-07-10", // Formato YYYY-MM-DD
+    "dueDate": "2025-08-10",   // Formato YYYY-MM-DD
+    "notes": "Notas adicionales sobre la factura.", // Opcional
+    "items": [ // Requerido, al menos un ítem
+      {
+        "description": "Desarrollo de API",
+        "quantity": "40.5",
+        "unitPrice": "55.00"
+      },
+      {
+        "description": "Diseño de Base de Datos",
+        "quantity": "10",
+        "unitPrice": "70.00"
+      }
+    ]
+  }
+  ```
+- **Respuesta Exitosa (201 CREATED - `Invoice`):
+  ```json
+  {
+    "id": "uuid-de-la-factura",
+    "invoiceNumber": "INV-2025-0001",
+    "status": "DRAFT",
+    "totalAmount": "2927.50",
+    "clientId": "uuid-del-cliente",
+    "projectId": "uuid-del-proyecto",
+    "issueDate": "2025-07-10",
+    "dueDate": "2025-08-10",
+    "notes": "Notas adicionales sobre la factura.",
     "createdAt": "timestamp",
-    "updatedAt": "timestamp"
-    // ...datos del cliente, proyectos asociados (requerirá lógica adicional o endpoints)
+    "updatedAt": "timestamp",
+    "items": [
+      {
+        "id": "uuid-item-1",
+        "description": "Desarrollo de API",
+        "quantity": "55.00",
+        "unitPrice": "40.50",
+        "totalPrice": "2227.50",
+        "invoiceId": "uuid-de-la-factura",
+        "createdAt": "timestamp",
+        "updatedAt": "timestamp"
+      }
+      // ...otros ítems
+    ],
+    "client": { "id": "...", "name": "...", "email": "..." },
+    "project": { "id": "...", "name": "..." }
   }
   ```
 
-#### 4. Actualizar Cliente (Datos básicos del Usuario)
-- **Endpoint:** `PATCH /users/:id`
-- **Descripción:** Actualiza los datos básicos de un usuario (cliente o cualquier otro rol).
+#### 2. Listar Facturas
+- **Endpoint:** `GET /invoices`
+- **Descripción:** Obtiene una lista de todas las facturas con sus relaciones (cliente, proyecto, ítems).
+- **Autenticación:** Requerida.
+- **Respuesta Exitosa (200 OK - `Invoice[]`):** Un array de objetos `Invoice`.
+
+#### 3. Obtener Detalles de una Factura
+- **Endpoint:** `GET /invoices/:id`
+- **Descripción:** Obtiene los detalles completos de una factura por su ID.
 - **Autenticación:** Requerida.
 - **Parámetros de Ruta:**
-    - `id`: UUID del usuario/cliente.
-- **Cuerpo de la Solicitud (`UpdateUserDto`):
+    - `id`: UUID de la factura.
+- **Respuesta Exitosa (200 OK - `Invoice`):** Similar a la respuesta de creación.
+
+#### 4. Actualizar Factura
+- **Endpoint:** `PATCH /invoices/:id`
+- **Descripción:** Actualiza los datos de una factura. Si se proporciona un nuevo array de `items`, reemplazará completamente a los existentes. El `totalAmount` se recalcula si se modifican los ítems.
+- **Autenticación:** Requerida.
+- **Parámetros de Ruta:**
+    - `id`: UUID de la factura.
+- **Cuerpo de la Solicitud (`UpdateInvoiceDto`):** (Campos opcionales)
   ```json
   {
-    "fullName": "Nuevo Nombre Cliente Inc.", // Actualiza el campo 'name'
-    "email": "nuevo_email@example.com",   // Opcional
-    "password": "nuevaSuperSegura123"      // Opcional, si se desea cambiar
+    "status": "SENT", // Valores de invoiceStatusEnum: 'DRAFT', 'SENT', 'PAID', 'OVERDUE', 'VOID'
+    "notes": "Factura enviada al cliente.",
+    "items": [
+      {
+        "description": "Servicio de consultoría (actualizado)",
+        "quantity": "20",
+        "unitPrice": "100.00"
+      }
+    ]
   }
   ```
-- **Respuesta Exitosa (200 OK - `UserResponse`):** (Refleja los campos actualizados del usuario)
-- **Notas Importantes:**
-    - Este endpoint **NO** actualiza campos específicos del `ClientProfile` (como `companyName`, `contactPerson`, `phone`, `address`, `status` del perfil de cliente, etc.).
-    - Para actualizar esos detalles del perfil de cliente, se necesitaría un endpoint dedicado (ej. `PATCH /client-profiles/:userId`) que actualmente no está expuesto a través de un controlador.
+- **Respuesta Exitosa (200 OK - `Invoice`):** Devuelve la factura completa y actualizada.
 
-#### 5. Eliminar Cliente
-- **Endpoint:** `DELETE /users/:id`
-- **Descripción:** Elimina un usuario/cliente (hard delete) y su perfil de cliente asociado si existe (por la configuración de la base de datos con `onDelete: 'CASCADE'` en la relación `userId` de `clientProfilesTable`).
+#### 5. Anular Factura (Soft Delete)
+- **Endpoint:** `DELETE /invoices/:id`
+- **Descripción:** Realiza un borrado lógico de la factura, cambiando su `status` a `VOID`. La factura no se elimina de la base de datos.
 - **Autenticación:** Requerida.
 - **Parámetros de Ruta:**
-    - `id`: UUID del usuario/cliente.
-- **Respuesta Exitosa (204 No Content):** No devuelve cuerpo.
+    - `id`: UUID de la factura.
+- **Respuesta Exitosa (200 OK - `Invoice`):** Devuelve la factura con el estado `VOID`.
 
-### Panel del Cliente (FRONT-009)
+---
+
+## Panel del Cliente (FRONT-009)
 Para el panel del cliente, el frontend necesitará:
-1. Autenticar al usuario con rol "CLIENTE".
-2. Obtener el `id` del usuario autenticado (`currentUser.id`) y su `role` desde `GET /auth/me`.
-3. Realizar las siguientes llamadas y filtrar/procesar los datos en el frontend:
-    - **Proyectos del Cliente:** Llamar a `GET /projects`. Luego, filtrar los proyectos donde `project.clientId === currentUser.id`. El campo `clientId` en `CreateProjectDto` y la interfaz `Project` es crucial.
-    - **Tareas del Cliente:** Llamar a `GET /tasks`. Luego, filtrar las tareas donde `task.assignedToId === currentUser.id` o aquellas tareas que pertenezcan a proyectos del cliente (requiere obtener primero los proyectos del cliente y luego filtrar tareas por `task.projectId`).
-- **Archivos y Facturas:** Estos módulos no están implementados en el backend actual. Requerirán nuevos endpoints (`/files`, `/invoices`) en el futuro.
-- **Visualización de Datos del Perfil de Cliente:** Para mostrar datos como `companyName`, `contactPerson`, etc., el frontend necesitaría un endpoint para obtener el `ClientProfile` (ej. `GET /client-profiles/user/:userId`), que actualmente no está expuesto.
+1. Autenticar al usuario con rol `CLIENT`.
+2. Obtener el `id` del usuario autenticado (`currentUser.id`) desde `GET /auth/me`.
+3. Realizar las siguientes llamadas y procesar los datos:
+    - **Proyectos del Cliente:** `GET /projects`. Filtrar donde `project.clientId === currentUser.id`.
+    - **Tareas del Cliente:** `GET /tasks`. Filtrar las tareas que pertenezcan a los proyectos del cliente.
+    - **Facturas del Cliente:** `GET /invoices`. Filtrar donde `invoice.clientId === currentUser.id`.
+    - **Perfil del Cliente:** `GET /clients`. Buscar el perfil donde `client.userId === currentUser.id` para mostrar datos como `companyName`, `contactPerson`, etc.
 
 ---
 
 ## Notas Generales para el Frontend
 
-- **Autenticación:** Todas las rutas (excepto `/auth/login` y `/auth/register`) requerirán un `Authorization: Bearer <JWT_TOKEN>` header.
-- **Manejo de Errores:** La API devolverá códigos de estado HTTP estándar para errores (400, 401, 403, 404, 500). El cuerpo de la respuesta del error usualmente contendrá un mensaje.
+- **Autenticación:** Todas las rutas (excepto `/auth/login` y `/auth/register`) requieren una cabecera `Authorization: Bearer <JWT_TOKEN>`.
+- **Manejo de Errores:** La API utiliza códigos de estado HTTP estándar (400, 401, 403, 404, 500). El cuerpo de la respuesta del error usualmente contiene un objeto JSON con detalles.
   ```json
   {
-    "statusCode": 400,
-    "message": "Validación fallida o datos incorrectos.",
-    "error": "Bad Request"
+    "statusCode": 404,
+    "message": "Cliente con ID '...' no encontrado.",
+    "error": "Not Found"
   }
   ```
-- **Paginación y Filtrado:** Actualmente, los endpoints de listado (`GET /projects`, `GET /tasks`, etc.) no soportan paginación ni filtrado avanzado por parámetros de query desde el backend. Estas funcionalidades deberían ser manejadas en el frontend sobre el conjunto completo de datos o ser solicitadas como mejoras al backend.
-- **Roles y Permisos:** El frontend deberá manejar la visibilidad de ciertas acciones/vistas basándose en el rol del usuario obtenido de `/auth/me`. El backend también aplicará la autorización a nivel de API.
-- **DTOs (Data Transfer Objects):** Los cuerpos de las solicitudes y las respuestas seguirán las estructuras definidas por los DTOs e Interfaces en el backend. Es importante que el frontend envíe los datos en el formato esperado.
-
-Este documento es una guía inicial basada en el estado actual del backend y sus servicios, y el `schema.ts`. A medida que el desarrollo avance, pueden surgir nuevos endpoints o modificaciones a los existentes. La comunicación constante entre los equipos de frontend y backend es clave.
+- **Paginación y Filtrado:** Los endpoints de listado (`GET /projects`, `GET /tasks`, etc.) no soportan paginación ni filtrado avanzado por parámetros de query en el backend. Estas operaciones deben ser manejadas en el frontend sobre el conjunto completo de datos o ser solicitadas como mejoras.
+- **Roles y Permisos:** El frontend debe gestionar la visibilidad de acciones y vistas basándose en el rol del usuario obtenido de `/auth/me`. El backend aplica una segunda capa de autorización a nivel de API.
+- **DTOs (Data Transfer Objects):** Los cuerpos de las solicitudes deben adherirse estrictamente a las estructuras definidas por los DTOs del backend para evitar errores de validación (400 Bad Request).

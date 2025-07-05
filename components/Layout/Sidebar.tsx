@@ -20,7 +20,8 @@ import {
   LogOut,
   Menu,
   X,
-  FolderOpen
+  FolderOpen,
+  FileText
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -30,6 +31,7 @@ const navigationItems = [
   { name: 'Clients', href: '/clients', icon: Building2, route: '/clients' },
   { name: 'Projects', href: '/projects', icon: FolderOpen, route: '/projects' },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, route: '/tasks' },
+  { name: 'Invoices', href: '/invoices', icon: FileText, route: '/invoices' },
   { name: 'Calendar', href: '/calendar', icon: Calendar, route: '/calendar' },
   // { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
   // { name: 'Settings', href: '/settings', icon: Settings, route: '/settings' }
@@ -81,7 +83,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        <Separator className="mx-6 mb-6 bg-palero-navy1/30" />
+        <Separator className="mx-6 mb-6 w-auto bg-palero-navy1/30" />
 
         <nav className="space-y-2 px-3">
           {filteredNavigation.map((item) => {

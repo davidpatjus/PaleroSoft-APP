@@ -76,6 +76,61 @@ export interface Comment {
   updatedAt: string;
 }
 
+export interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientProfile {
+  id: string;
+  userId: string;
+  companyName?: string;
+  contactPerson?: string;
+  phone?: string;
+  address?: string;
+  status: 'PROSPECT' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  quantity: number | string;
+  unitPrice: number | string;
+  total: number | string;
+  invoiceId: string;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  clientId: string;
+  projectId?: string;
+  issueDate: string;
+  dueDate: string;
+  totalAmount: number | string;
+  status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'VOID';
+  notes?: string;
+  items: InvoiceItem[];
+  createdAt: string;
+  updatedAt: string;
+  client?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  project?: {
+    id: string;
+    name: string;
+  };
+}
+
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
@@ -208,6 +263,45 @@ class ApiClient {
 
   async deleteUser(id: string): Promise<void> {
     return this.request<void>(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Clients endpoints
+  async getClients(): Promise<ClientProfile[]> {
+    return this.request<ClientProfile[]>('/clients');
+  }
+
+  async getClientById(id: string): Promise<ClientProfile> {
+    return this.request<ClientProfile>(`/clients/${id}`);
+  }
+
+  async createClient(clientData: {
+    name: string;
+    email: string;
+    phone?: string;
+    address?: string;
+  }): Promise<Client> {
+    return this.request<Client>('/clients', {
+      method: 'POST',
+      body: JSON.stringify(clientData),
+    });
+  }
+
+  async updateClient(id: string, clientData: Partial<{
+    name: string;
+    email: string;
+    phone?: string;
+    address?: string;
+  }>): Promise<Client> {
+    return this.request<Client>(`/clients/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(clientData),
+    });
+  }
+
+  async deleteClient(id: string): Promise<void> {
+    return this.request<void>(`/clients/${id}`, {
       method: 'DELETE',
     });
   }
@@ -380,6 +474,77 @@ class ApiClient {
 
   async deleteComment(id: string): Promise<void> {
     return this.request<void>(`/comments/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Client Profile endpoints
+  async getClientProfileByUserId(userId: string): Promise<ClientProfile> {
+    return this.request<ClientProfile>(`/clients/profile/by-user/${userId}`);
+  }
+
+  async completeClientProfile(userId: string, profileData: {
+    companyName: string;
+    contactPerson: string;
+    phone?: string;
+    address?: string;
+  }): Promise<ClientProfile> {
+    return this.request<ClientProfile>(`/clients/profile/by-user/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  // Invoice endpoints
+  async getInvoices(): Promise<Invoice[]> {
+    return this.request<Invoice[]>('/invoices');
+  }
+
+  async getInvoiceById(id: string): Promise<Invoice> {
+    return this.request<Invoice>(`/invoices/${id}`);
+  }
+
+  async createInvoice(invoiceData: {
+    clientId: string;
+    projectId?: string;
+    issueDate: string;
+    dueDate: string;
+    status: 'DRAFT' | 'SENT';
+    items: {
+      description: string;
+      quantity: number | string;
+      unitPrice: number | string;
+    }[];
+    notes?: string;
+  }): Promise<Invoice> {
+    return this.request<Invoice>('/invoices', {
+      method: 'POST',
+      body: JSON.stringify(invoiceData),
+    });
+  }
+
+  async updateInvoice(id: string, invoiceData: Partial<{
+    clientId: string;
+    projectId?: string;
+    issueDate: string;
+    dueDate: string;
+    status: 'DRAFT' | 'SENT' | 'PAID' | 'VOID';
+    items: {
+      id?: string;
+      description: string;
+      quantity: number | string;
+      unitPrice: number | string;
+    }[];
+    notes?: string;
+  }>): Promise<Invoice> {
+    return this.request<Invoice>(`/invoices/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(invoiceData),
+    });
+  }
+
+  async deleteInvoice(id: string): Promise<void> {
+    return this.request<void>(`/invoices/${id}`, {
       method: 'DELETE',
     });
   }
