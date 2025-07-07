@@ -13,19 +13,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 
 const invoiceItemSchema = z.object({
-  description: z.string().min(1, "La descripción es requerida"),
-  quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
-  unitPrice: z.coerce.number().min(0.01, "El precio unitario debe ser positivo"),
+  description: z.string().min(1, "Description is required"),
+  quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
+  unitPrice: z.coerce.number().min(0.01, "Unit price must be positive"),
 });
 
 const invoiceSchema = z.object({
-  clientId: z.string().min(1, "El cliente es requerido"),
-  projectId: z.string().min(1, "El proyecto es requerido"),
-  dueDate: z.string().min(1, "La fecha de vencimiento es requerida"),
-  items: z.array(invoiceItemSchema).min(1, "Se requiere al menos un ítem"),
+  clientId: z.string().min(1, "Client is required"),
+  projectId: z.string().min(1, "Project is required"),
+  dueDate: z.string().min(1, "Due date is required"),
+  items: z.array(invoiceItemSchema).min(1, "At least one item is required"),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -81,8 +81,8 @@ const CreateInvoicePage = () => {
       ...data,
       items: data.items.map(item => ({
         ...item,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
+        quantity: String(item.quantity),
+        unitPrice: String(item.unitPrice),
       })),
       issueDate: new Date().toISOString().split('T')[0],
       status: 'DRAFT' as const,
@@ -100,7 +100,7 @@ const CreateInvoicePage = () => {
   if (isLoading) {
     return (
         <div className="flex items-center justify-center h-screen">
-            <div className="text-lg">Cargando...</div>
+            <div className="text-lg">Loading...</div>
         </div>
     );
   }
@@ -108,12 +108,12 @@ const CreateInvoicePage = () => {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight">Crear Nueva Factura</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Create New Invoice</h2>
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Detalles de la Factura</CardTitle>
-            <CardDescription>Completa el formulario para crear una nueva factura.</CardDescription>
+            <CardTitle>Invoice Details</CardTitle>
+            <CardDescription>Fill out the form to create a new invoice.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -124,11 +124,11 @@ const CreateInvoicePage = () => {
                     name="clientId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cliente</FormLabel>
+                        <FormLabel>Client</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecciona un cliente" />
+                              <SelectValue placeholder="Select a client" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -149,11 +149,11 @@ const CreateInvoicePage = () => {
                     name="projectId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Proyecto</FormLabel>
+                        <FormLabel>Project</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} disabled={!form.watch('clientId')}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecciona un proyecto" />
+                              <SelectValue placeholder="Select a project" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -177,7 +177,7 @@ const CreateInvoicePage = () => {
                   name="dueDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fecha de Vencimiento</FormLabel>
+                      <FormLabel>Due Date</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -187,7 +187,7 @@ const CreateInvoicePage = () => {
                 />
 
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Ítems de la Factura</h3>
+                  <h3 className="text-lg font-medium mb-4">Invoice Items</h3>
                   <div className="space-y-4">
                     {fields.map((field, index) => (
                       <div key={field.id} className="flex items-end space-x-2 md:space-x-4 p-4 border rounded-lg bg-muted/50">
@@ -197,9 +197,9 @@ const CreateInvoicePage = () => {
                             name={`items.${index}.description`}
                             render={({ field }) => (
                               <FormItem className="flex-grow">
-                                <FormLabel>Descripción</FormLabel>
+                                <FormLabel>Description</FormLabel>
                                 <FormControl>
-                                  <Textarea {...field} placeholder="Descripción del servicio o producto" />
+                                  <Textarea {...field} placeholder="Description of the service or product" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -210,7 +210,7 @@ const CreateInvoicePage = () => {
                             name={`items.${index}.quantity`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Cantidad</FormLabel>
+                                <FormLabel>Quantity</FormLabel>
                                 <FormControl>
                                   <Input type="number" {...field} placeholder="1" />
                                 </FormControl>
@@ -223,7 +223,7 @@ const CreateInvoicePage = () => {
                             name={`items.${index}.unitPrice`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Precio Unitario</FormLabel>
+                                <FormLabel>Unit Price</FormLabel>
                                 <FormControl>
                                   <Input type="number" step="0.01" {...field} placeholder="0.00" />
                                 </FormControl>
@@ -245,7 +245,7 @@ const CreateInvoicePage = () => {
                     className="mt-4"
                     onClick={() => append({ description: '', quantity: 1, unitPrice: 0 })}
                   >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                   </Button>
                 </div>
 
@@ -253,9 +253,9 @@ const CreateInvoicePage = () => {
 
                 <div className="flex justify-end space-x-4">
                     <Button type="button" variant="outline" onClick={() => router.back()}>
-                        Cancelar
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back
                     </Button>
-                    <Button type="submit">Crear Factura</Button>
+                    <Button type="submit">Create Invoice</Button>
                 </div>
               </form>
             </Form>

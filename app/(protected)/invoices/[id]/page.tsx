@@ -161,12 +161,36 @@ const InvoiceDetailsPage = () => {
                 </div>
 
                 <div>
-                    <h3 className="font-semibold text-lg mb-2">Items</h3>
-                    <div className="overflow-x-auto">
+                    <h3 className="font-semibold text-lg mb-4">Items</h3>
+                    {/* Mobile View */}
+                    <div className="md:hidden space-y-4">
+                        {invoice.items.map((item) => (
+                            <Card key={item.id} className="bg-muted/50">
+                                <CardContent className="p-4 grid grid-cols-2 gap-4 text-sm">
+                                    <div className="col-span-2 font-medium text-palero-navy1">{item.description}</div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Quantity</p>
+                                        <p>{item.quantity}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Unit Price</p>
+                                        <p>${Number(item.unitPrice).toFixed(2)}</p>
+                                    </div>
+                                    <div className="col-span-2 text-right">
+                                        <p className="text-xs text-muted-foreground">Total</p>
+                                        <p className="font-semibold text-lg text-palero-navy1">${(Number(item.quantity) * Number(item.unitPrice)).toFixed(2)}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Desktop View */}
+                    <div className="hidden md:block border rounded-lg overflow-x-auto">
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[60%]">Description</TableHead>
+                                <TableHead className="w-[55%]">Description</TableHead>
                                 <TableHead className="text-right">Quantity</TableHead>
                                 <TableHead className="text-right">Unit Price</TableHead>
                                 <TableHead className="text-right">Total</TableHead>

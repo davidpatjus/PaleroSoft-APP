@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const invoiceItemSchema = z.object({
@@ -316,9 +316,9 @@ const EditInvoicePage = () => {
 
                     {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
-                    <div className="flex justify-end space-x-4">
+                    <div className="flex justify-end space-x-4 mt-8">
                         <Button type="button" variant="outline" onClick={() => router.back()}>
-                            Cancel
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Back
                         </Button>
                         <Button type="submit">Update Invoice</Button>
                     </div>

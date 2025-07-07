@@ -177,52 +177,61 @@ const InvoicesPage = () => {
             <CardDescription>A list of all invoices in the system.</CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice #</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id} className="hover:bg-palero-blue1/5">
-                  <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                  <TableCell>{invoice.client?.name || invoice.clientId}</TableCell>
-                  <TableCell>{invoice.project?.name || 'N/A'}</TableCell>
-                  <TableCell className="text-right">${Number(invoice.totalAmount).toFixed(2)}</TableCell>
-                  <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge className={`${getStatusColors(invoice.status)}`}>{invoice.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}`)}>View Details</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}/edit`)}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setInvoiceToDelete(invoice.id)} className="text-red-600">Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="p-4 sm:p-6">
+          <div className="space-y-4">
+            {invoices.map((invoice) => (
+              <div key={invoice.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-palero-blue1/20 rounded-lg bg-gradient-to-r from-white to-palero-blue1/5 hover:shadow-md transition-all duration-200">
+                <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 items-center text-sm">
+                  <div className="font-medium">
+                    <p className="text-xs text-palero-navy2 sm:hidden">Invoice #</p>
+                    <p className="text-palero-navy1">{invoice.invoiceNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-palero-navy2 sm:hidden">Client</p>
+                    <p className="truncate text-palero-navy1">{invoice.client?.name || invoice.clientId}</p>
+                  </div>
+                  <div className="hidden md:block">
+                    <p className="text-xs text-palero-navy2 sm:hidden">Project</p>
+                    <p className="truncate text-palero-navy1">{invoice.project?.name || 'N/A'}</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs text-palero-navy2 sm:hidden">Amount</p>
+                    <p className="font-semibold text-palero-navy1">${Number(invoice.totalAmount).toFixed(2)}</p>
+                  </div>
+                  <div className="hidden md:block">
+                    <p className="text-xs text-palero-navy2 sm:hidden">Due</p>
+                    <p className="text-palero-navy1">{new Date(invoice.dueDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end space-x-2 mt-4 sm:mt-0 sm:ml-4">
+                  <Badge className={`${getStatusColors(invoice.status)} text-xs`}>{invoice.status}</Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button aria-haspopup="true" size="icon" variant="ghost">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Toggle menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}`)}>View Details</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}/edit`)}>Edit</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setInvoiceToDelete(invoice.id)} className="text-red-600">Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
+            {invoices.length === 0 && (
+              <div className="text-center py-12 px-4">
+                <FileText className="h-12 w-12 text-palero-blue1/50 mx-auto mb-4" />
+                <p className="text-palero-navy2 font-medium">No invoices found</p>
+                <p className="text-sm text-palero-navy2/70 mt-1">
+                  Invoices will appear here when created
+                </p>
+              </div>
+            )}
+          </div>
           <AlertDialog open={!!invoiceToDelete} onOpenChange={() => setInvoiceToDelete(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
