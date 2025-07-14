@@ -212,9 +212,20 @@ const InvoiceDetailsPage = () => {
 
                 <div className="flex justify-end items-center mt-4">
                     <div className="text-right">
-                        <p className="text-muted-foreground">Subtotal: ${Number(invoice.totalAmount).toFixed(2)}</p>
-                        <p className="text-muted-foreground">Taxes (0%): $0.00</p>
-                        <p className="text-2xl font-bold mt-2">Total: ${Number(invoice.totalAmount).toFixed(2)}</p>
+                        {(() => {
+                            const subtotal = invoice.items.reduce((sum, item) => 
+                                sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+                            const taxAmount = subtotal * Number(invoice.taxes || 0) / 100;
+                            const total = subtotal + taxAmount;
+                            
+                            return (
+                                <>
+                                    <p className="text-muted-foreground">Subtotal: ${subtotal.toFixed(2)}</p>
+                                    <p className="text-muted-foreground">Taxes ({Number(invoice.taxes || 0).toFixed(2)}%): ${taxAmount.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold mt-2">Total: ${total.toFixed(2)}</p>
+                                </>
+                            );
+                        })()}
                     </div>
                 </div>
 

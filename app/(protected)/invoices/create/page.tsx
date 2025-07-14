@@ -6,7 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient, ClientProfile, Project } from '@/lib/api';
+import { apiClient, UserResponse, Project } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +25,7 @@ const invoiceSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   projectId: z.string().min(1, "Project is required"),
   dueDate: z.string().min(1, "Due date is required"),
+  taxes: z.coerce.number().min(0, "Taxes must be 0 or greater").max(100, "Taxes cannot exceed 100%"),
   items: z.array(invoiceItemSchema).min(1, "At least one item is required"),
 });
 
@@ -33,7 +34,7 @@ type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 const CreateInvoicePage = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const [clients, setClients] = useState<ClientProfile[]>([]);
+  const [clientUsers, setClientUsers] = useState<UserResponse[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +45,7 @@ const CreateInvoicePage = () => {
       clientId: '',
       projectId: '',
       dueDate: '',
+      taxes: 0,
       items: [{ description: '', quantity: 1, unitPrice: 0 }],
     },
   });
@@ -58,14 +60,17 @@ const CreateInvoicePage = () => {
       if (!user) return;
       try {
         setIsLoading(true);
-        const [clientData, projectData] = await Promise.all([
-          apiClient.getClients(),
+        const [usersData, projectData] = await Promise.all([
+          apiClient.getUsers(),
           apiClient.getProjects(),
         ]);
-        setClients(clientData);
+        
+        // Filtrar solo usuarios con rol CLIENT
+        const clientUsersFiltered = usersData.filter(u => u.role === 'CLIENT');
+        setClientUsers(clientUsersFiltered);
         setProjects(projectData);
       } catch (err) {
-        console.error("Failed to fetch clients or projects", err);
+        console.error("Failed to fetch users or projects", err);
         setError("Failed to load initial data.");
       } finally {
         setIsLoading(false);
@@ -84,6 +89,7 @@ const CreateInvoicePage = () => {
         quantity: String(item.quantity),
         unitPrice: String(item.unitPrice),
       })),
+      taxes: Number(data.taxes),
       issueDate: new Date().toISOString().split('T')[0],
       status: 'DRAFT' as const,
     };
@@ -132,9 +138,9 @@ const CreateInvoicePage = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {clients.map((client) => (
-                              <SelectItem key={client.id} value={client.userId}>
-                                {client.userId}
+                            {clientUsers.map((client) => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {client.name} ({client.email})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -172,19 +178,42 @@ const CreateInvoicePage = () => {
                   />
                 </div>
                 
-                <FormField
-                  control={form.control}
-                  name="dueDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Due Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="taxes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tax Rate (%)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            max="100" 
+                            placeholder="0.00" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div>
                   <h3 className="text-lg font-medium mb-4">Invoice Items</h3>
@@ -247,6 +276,31 @@ const CreateInvoicePage = () => {
                   >
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                   </Button>
+                </div>
+
+                {/* Invoice Summary */}
+                <div className="border-t pt-6">
+                    <h3 className="text-lg font-medium mb-4">Invoice Summary</h3>
+                    <div className="flex justify-end">
+                        <div className="text-right space-y-2">
+                            {(() => {
+                                const items = form.watch('items') || [];
+                                const subtotal = items.reduce((sum, item) => 
+                                    sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0);
+                                const taxRate = Number(form.watch('taxes') || 0);
+                                const taxAmount = subtotal * taxRate / 100;
+                                const total = subtotal + taxAmount;
+                                
+                                return (
+                                    <>
+                                        <p className="text-muted-foreground">Subtotal: ${subtotal.toFixed(2)}</p>
+                                        <p className="text-muted-foreground">Taxes ({taxRate.toFixed(2)}%): ${taxAmount.toFixed(2)}</p>
+                                        <p className="text-xl font-bold">Total: ${total.toFixed(2)}</p>
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    </div>
                 </div>
 
                 {error && <p className="text-sm font-medium text-destructive">{error}</p>}

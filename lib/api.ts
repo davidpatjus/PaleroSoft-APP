@@ -115,6 +115,7 @@ export interface Invoice {
   issueDate: string;
   dueDate: string;
   totalAmount: number | string;
+  taxes: number | string;
   status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'VOID';
   notes?: string;
   items: InvoiceItem[];
@@ -510,6 +511,7 @@ class ApiClient {
     issueDate: string;
     dueDate: string;
     status: 'DRAFT' | 'SENT';
+    taxes?: number | string;
     items: {
       description: string;
       quantity: number | string;
@@ -529,6 +531,7 @@ class ApiClient {
     issueDate: string;
     dueDate: string;
     status: 'DRAFT' | 'SENT' | 'PAID' | 'VOID';
+    taxes: number | string;
     items: {
       id?: string;
       description: string;
