@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from './ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from '@/components/ui/select';
 import { apiClient, Project } from '@/lib/api';
-import { Label } from './ui/label';
+import { Label } from '@/components/ui/label';
 
 interface ProjectModalProps {
   open: boolean;
