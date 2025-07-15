@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { apiClient, UserResponse, AuthResponse } from '@/lib/api';
 
 interface User {
@@ -19,6 +19,15 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   refreshUser: () => Promise<void>;
+  isProfileIncomplete: boolean;
+  isCheckingProfile: boolean;
+  completeClientProfile: (profileData: {
+    companyName: string;
+    contactPerson: string;
+    phone?: string;
+    address?: string;
+  }) => Promise<boolean>;
+  skipProfileCompletion: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,18 +35,68 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(false);
 
-  const refreshUser = async () => {
+  const checkClientProfile = useCallback(async (userId: string) => {
+    setIsCheckingProfile(true);
+    try {
+      await apiClient.getClientProfileByUserId(userId);
+      setIsProfileIncomplete(false);
+    } catch (error) {
+      // Si el endpoint retorna error (404), significa que el perfil no existe
+      console.log("Client profile not found. User needs to complete profile.");
+      setIsProfileIncomplete(true);
+    } finally {
+      setIsCheckingProfile(false);
+    }
+  }, []);
+
+  const completeClientProfile = useCallback(async (profileData: {
+    companyName: string;
+    contactPerson: string;
+    phone?: string;
+    address?: string;
+  }): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      await apiClient.completeClientProfile(user.id, profileData);
+      setIsProfileIncomplete(false);
+      return true;
+    } catch (error) {
+      console.error('Failed to complete client profile:', error);
+      return false;
+    }
+  }, [user]);
+
+  const skipProfileCompletion = useCallback(() => {
+    // Permite al usuario continuar sin completar el perfil
+    setIsProfileIncomplete(false);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
     try {
       const userData = await apiClient.getCurrentUser();
       setUser(userData);
+      
+      // Si el usuario es CLIENT, verificar si tiene perfil completo
+      if (userData.role === 'CLIENT') {
+        await checkClientProfile(userData.id);
+      } else {
+        // Si no es CLIENT, asegurar que el estado esté en false
+        setIsProfileIncomplete(false);
+        setIsCheckingProfile(false);
+      }
     } catch (error) {
       console.error('Failed to fetch user:', error);
       // If token is invalid, clear it
       apiClient.clearToken();
       setUser(null);
+      setIsProfileIncomplete(false);
+      setIsCheckingProfile(false);
     }
-  };
+  }, [checkClientProfile]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -50,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initAuth();
-  }, []);
+  }, [refreshUser]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -91,10 +150,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     apiClient.clearToken();
     setUser(null);
+    setIsProfileIncomplete(false);
+    setIsCheckingProfile(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading, refreshUser }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      register, 
+      logout, 
+      isLoading, 
+      refreshUser,
+      isProfileIncomplete,
+      isCheckingProfile,
+      completeClientProfile,
+      skipProfileCompletion
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -406,7 +406,6 @@ La gestión de clientes se centraliza en este módulo, que interactúa con las t
 #### 1. Crear Perfil de Cliente (para un usuario existente)
 - **Endpoint:** `POST /clients`
 - **Descripción:** Crea un perfil de cliente para un usuario que ya existe en el sistema y tiene el rol `CLIENT`. Este endpoint es ideal para ser usado por administradores.
-- **Autenticación:** Requerida (JWT).
 - **Cuerpo de la Solicitud (`CreateClientDto`):
   ```json
   {
@@ -443,7 +442,6 @@ La gestión de clientes se centraliza en este módulo, que interactúa con las t
 #### 2. Listar Clientes
 - **Endpoint:** `GET /clients`
 - **Descripción:** Obtiene una lista de todos los perfiles de clientes.
-- **Autenticación:** Requerida (JWT).
 - **Respuesta Exitosa (200 OK - `ClientProfile[]`):
   ```json
   [
@@ -460,7 +458,6 @@ La gestión de clientes se centraliza en este módulo, que interactúa con las t
 #### 3. Obtener Detalles de un Cliente
 - **Endpoint:** `GET /clients/:id`
 - **Descripción:** Obtiene el perfil completo de un cliente por el **ID de su perfil**.
-- **Autenticación:** Requerida (JWT).
 - **Parámetros de Ruta:**
     - `id`: UUID del `client_profile`.
 - **Respuesta Exitosa (200 OK - `ClientProfile`):** Similar a la respuesta de creación.
@@ -468,7 +465,6 @@ La gestión de clientes se centraliza en este módulo, que interactúa con las t
 #### 4. Actualizar Perfil de Cliente
 - **Endpoint:** `PATCH /clients/:id`
 - **Descripción:** Actualiza los datos del perfil de un cliente por el **ID de su perfil**.
-- **Autenticación:** Requerida (JWT).
 - **Parámetros de Ruta:**
     - `id`: UUID del `client_profile`.
 - **Cuerpo de la Solicitud (`UpdateClientDto`):** (Campos opcionales)
@@ -507,7 +503,6 @@ La gestión de clientes se centraliza en este módulo, que interactúa con las t
 #### 7. Completar Perfil de Cliente (para el propio usuario)
 - **Endpoint:** `POST /clients/profile/by-user/:userId`
 - **Descripción:** Permite a un usuario con rol `CLIENT` que no tiene perfil, crear el suyo. Falla si el perfil ya existe.
-- **Autenticación:** Requerida (JWT).
 - **Parámetros de Ruta:**
     - `userId`: UUID del `user` que está completando su perfil.
 - **Cuerpo de la Solicitud (`CompleteClientProfileDto`):
