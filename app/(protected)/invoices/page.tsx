@@ -48,6 +48,7 @@ const InvoicesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'due-soon' | 'overdue'>('all');
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -79,7 +80,22 @@ const InvoicesPage = () => {
     }
   };
 
-  const getStatusColors = (status: string) => {
+  const getStatusColors = (status: string, dueDate?: string) => {
+    // Check if invoice is overdue based on due date
+    if (dueDate && status !== 'PAID') {
+      const today = new Date();
+      const due = new Date(dueDate);
+      const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) {
+        // Overdue
+        return 'bg-red-500 text-white animate-pulse';
+      } else if (diffDays <= 7) {
+        // Due soon
+        return 'bg-yellow-500 text-white';
+      }
+    }
+
     switch (status) {
       case 'PAID':
         return 'bg-palero-green1 text-white';
@@ -88,7 +104,7 @@ const InvoicesPage = () => {
       case 'DRAFT':
         return 'bg-palero-navy2/80 text-white';
       case 'OVERDUE':
-        return 'bg-red-500 text-white';
+        return 'bg-red-500 text-white animate-pulse';
       case 'VOID':
         return 'bg-gray-500 text-white';
       default:
@@ -96,9 +112,62 @@ const InvoicesPage = () => {
     }
   };
 
+  const getInvoiceRowStyle = (status: string, dueDate?: string) => {
+    if (dueDate && status !== 'PAID') {
+      const today = new Date();
+      const due = new Date(dueDate);
+      const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) {
+        // Overdue - red background
+        return 'bg-red-50 border-l-4 border-red-500';
+      } else if (diffDays <= 7) {
+        // Due soon - yellow background
+        return 'bg-yellow-50 border-l-4 border-yellow-500';
+      }
+    }
+    return '';
+  };
+
   const totalAmount = invoices.reduce((acc, inv) => acc + Number(inv.totalAmount), 0);
   const totalPaid = invoices.filter(inv => inv.status === 'PAID').reduce((acc, inv) => acc + Number(inv.totalAmount), 0);
   const totalPending = totalAmount - totalPaid;
+
+  const getFilteredInvoices = () => {
+    if (filter === 'all') return invoices;
+    
+    return invoices.filter(invoice => {
+      if (invoice.status === 'PAID') return false;
+      
+      const today = new Date();
+      const due = new Date(invoice.dueDate);
+      const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (filter === 'overdue') {
+        return diffDays < 0;
+      } else if (filter === 'due-soon') {
+        return diffDays >= 0 && diffDays <= 7;
+      }
+      
+      return false;
+    });
+  };
+
+  const filteredInvoices = getFilteredInvoices();
+  const overdueCount = invoices.filter(inv => {
+    if (inv.status === 'PAID') return false;
+    const today = new Date();
+    const due = new Date(inv.dueDate);
+    return due < today;
+  }).length;
+  
+  const dueSoonCount = invoices.filter(inv => {
+    if (inv.status === 'PAID') return false;
+    const today = new Date();
+    const due = new Date(inv.dueDate);
+    const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 7;
+  }).length;
 
   if (loading) {
     return (
@@ -139,6 +208,34 @@ const InvoicesPage = () => {
         </div>
       </div>
 
+      {/* Filter Buttons */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={filter === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilter('all')}
+          className={filter === 'all' ? 'bg-palero-blue1 hover:bg-palero-blue2' : ''}
+        >
+          All ({invoices.length})
+        </Button>
+        <Button
+          variant={filter === 'overdue' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilter('overdue')}
+          className={filter === 'overdue' ? 'bg-red-500 hover:bg-red-600' : overdueCount > 0 ? 'border-red-500 text-red-600 hover:bg-red-50' : ''}
+        >
+          Overdue ({overdueCount})
+        </Button>
+        <Button
+          variant={filter === 'due-soon' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilter('due-soon')}
+          className={filter === 'due-soon' ? 'bg-yellow-500 hover:bg-yellow-600' : dueSoonCount > 0 ? 'border-yellow-500 text-yellow-600 hover:bg-yellow-50' : ''}
+        >
+          Due Soon ({dueSoonCount})
+        </Button>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 md:grid-cols-3">
         <Card className="border-palero-blue1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
@@ -173,14 +270,22 @@ const InvoicesPage = () => {
       <Card className="bg-white/90 backdrop-blur-sm border-palero-blue1/20 shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>All Invoices</CardTitle>
-            <CardDescription>A list of all invoices in the system.</CardDescription>
+            <CardTitle>
+              {filter === 'all' ? 'All Invoices' : 
+               filter === 'overdue' ? 'Overdue Invoices' : 
+               'Invoices Due Soon'}
+            </CardTitle>
+            <CardDescription>
+              {filter === 'all' ? 'A list of all invoices in the system.' :
+               filter === 'overdue' ? 'Invoices that have passed their due date.' :
+               'Invoices due within the next 7 days.'}
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
           <div className="space-y-4">
-            {invoices.map((invoice) => (
-              <div key={invoice.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-palero-blue1/20 rounded-lg bg-gradient-to-r from-white to-palero-blue1/5 hover:shadow-md transition-all duration-200">
+            {filteredInvoices.map((invoice) => (
+              <div key={invoice.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-palero-blue1/20 rounded-lg bg-gradient-to-r from-white to-palero-blue1/5 hover:shadow-md transition-all duration-200 ${getInvoiceRowStyle(invoice.status, invoice.dueDate)}`}>
                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 items-center text-sm">
                   <div className="font-medium">
                     <p className="text-xs text-palero-navy2 sm:hidden">Invoice #</p>
@@ -204,7 +309,7 @@ const InvoicesPage = () => {
                   </div>
                 </div>
                 <div className="flex items-center justify-end space-x-2 mt-4 sm:mt-0 sm:ml-4">
-                  <Badge className={`${getStatusColors(invoice.status)} text-xs`}>{invoice.status}</Badge>
+                  <Badge className={`${getStatusColors(invoice.status, invoice.dueDate)} text-xs`}>{invoice.status}</Badge>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -222,6 +327,21 @@ const InvoicesPage = () => {
                 </div>
               </div>
             ))}
+            {filteredInvoices.length === 0 && invoices.length > 0 && (
+              <div className="text-center py-12 px-4">
+                <FileText className="h-12 w-12 text-palero-blue1/50 mx-auto mb-4" />
+                <p className="text-palero-navy2 font-medium">
+                  {filter === 'overdue' ? 'No overdue invoices' :
+                   filter === 'due-soon' ? 'No invoices due soon' :
+                   'No invoices found'}
+                </p>
+                <p className="text-sm text-palero-navy2/70 mt-1">
+                  {filter === 'overdue' ? 'All invoices are up to date' :
+                   filter === 'due-soon' ? 'No invoices are due in the next 7 days' :
+                   'Try changing the filter to see invoices'}
+                </p>
+              </div>
+            )}
             {invoices.length === 0 && (
               <div className="text-center py-12 px-4">
                 <FileText className="h-12 w-12 text-palero-blue1/50 mx-auto mb-4" />

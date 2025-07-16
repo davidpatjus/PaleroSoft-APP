@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient, UserResponse, Project, Task } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Users, Building2, CheckSquare, TrendingUp, Calendar, Loader2, Plus, ArrowRight } from 'lucide-react';
+import { InvoiceDueAlerts } from '@/components/InvoiceDueAlerts';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -17,11 +18,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setIsLoading(true);
       const [usersData, projectsData, tasksData] = await Promise.all([
@@ -38,7 +35,11 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.role]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -283,9 +284,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 xl:grid-cols-4">
         
-        {/* Recent Tasks - Takes 2 columns on large screens */}
+        {/* Recent Tasks - Takes 2 columns */}
         <Card className="lg:col-span-2 bg-white/80 backdrop-blur-sm border-palero-blue1/20">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
@@ -402,6 +403,9 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Invoice Due Alerts */}
+        <InvoiceDueAlerts className="bg-white/80 backdrop-blur-sm" />
       </div>
 
       {/* Progress Section */}

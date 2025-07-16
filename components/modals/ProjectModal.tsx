@@ -17,11 +17,11 @@ interface ProjectModalProps {
 }
 
 const statusOptions = [
-  { value: 'PENDING', label: 'Pendiente' },
-  { value: 'IN_PROGRESS', label: 'En progreso' },
-  { value: 'REVIEW', label: 'En revisión' },
-  { value: 'COMPLETED', label: 'Completado' },
-  { value: 'ARCHIVED', label: 'Archivado' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'IN_PROGRESS', label: 'In Progress' },
+  { value: 'REVIEW', label: 'Review' },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'ARCHIVED', label: 'Archived' },
 ];
 
 export function ProjectModal({ open, onClose, onSuccess, users, initialData = {}, mode = 'create' }: ProjectModalProps) {
@@ -74,7 +74,7 @@ export function ProjectModal({ open, onClose, onSuccess, users, initialData = {}
       onSuccess(project);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Error al guardar el proyecto');
+      setError(err.message || 'Error saving project');
     } finally {
       setLoading(false);
     }
@@ -84,31 +84,31 @@ export function ProjectModal({ open, onClose, onSuccess, users, initialData = {}
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{mode === 'edit' ? 'Editar Proyecto' : 'Crear Proyecto'}</DialogTitle>
+          <DialogTitle>{mode === 'edit' ? 'Edit Project' : 'Create Project'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="project-name">Nombre del proyecto</Label>
+            <Label htmlFor="project-name">Project name</Label>
             <Input
               id="project-name"
-              placeholder="Nombre del proyecto"
+              placeholder="Project name"
               value={name}
               onChange={e => setName(e.target.value)}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="project-description">Descripción</Label>
+            <Label htmlFor="project-description">Description</Label>
             <Textarea
               id="project-description"
-              placeholder="Descripción"
+              placeholder="Description"
               value={description}
               onChange={e => setDescription(e.target.value)}
             />
           </div>
           <div className="flex gap-2">
             <div className="space-y-2 w-1/2">
-              <Label htmlFor="project-start">Fecha de inicio</Label>
+              <Label htmlFor="project-start">Start date</Label>
               <Input
                 id="project-start"
                 type="date"
@@ -118,7 +118,7 @@ export function ProjectModal({ open, onClose, onSuccess, users, initialData = {}
               />
             </div>
             <div className="space-y-2 w-1/2">
-              <Label htmlFor="project-end">Fecha de fin</Label>
+              <Label htmlFor="project-end">End date</Label>
               <Input
                 id="project-end"
                 type="date"
@@ -129,10 +129,10 @@ export function ProjectModal({ open, onClose, onSuccess, users, initialData = {}
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="project-status">Estado</Label>
+            <Label htmlFor="project-status">Status</Label>
             <Select value={status} onValueChange={value => setStatus(value as Project['status'])} required>
               <SelectTrigger id="project-status">
-                <SelectValue placeholder="Estado" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map(opt => (
@@ -142,10 +142,10 @@ export function ProjectModal({ open, onClose, onSuccess, users, initialData = {}
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="project-client">Cliente</Label>
+            <Label htmlFor="project-client">Client</Label>
             <Select value={clientId} onValueChange={value => setClientId(value)} required>
               <SelectTrigger id="project-client">
-                <SelectValue placeholder="Cliente" />
+                <SelectValue placeholder="Client" />
               </SelectTrigger>
               <SelectContent>
                 {users.map(u => (
@@ -156,8 +156,8 @@ export function ProjectModal({ open, onClose, onSuccess, users, initialData = {}
           </div>
           {error && <div className="text-red-500 text-sm">{error}</div>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : (mode === 'edit' ? 'Guardar Cambios' : 'Crear Proyecto')}</Button>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Saving...' : (mode === 'edit' ? 'Save Changes' : 'Create Project')}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
