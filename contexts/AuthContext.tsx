@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { apiClient, UserResponse, AuthResponse } from '@/lib/api';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { apiClient, UserResponse, AuthResponse, Notification } from '@/lib/api';
 
 interface User {
   id: string;
@@ -28,6 +29,12 @@ interface AuthContextType {
     address?: string;
   }) => Promise<boolean>;
   skipProfileCompletion: () => void;
+  // Notifications
+  notifications: Notification[];
+  unreadCount: number;
+  fetchNotifications: () => Promise<void>;
+  markAsRead: (notificationId: string) => Promise<void>;
+  isLoadingNotifications: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
+  
+  // Notifications state
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  const router = useRouter();
+  const pathname = usePathname();
 
   const checkClientProfile = useCallback(async (userId: string) => {
     setIsCheckingProfile(true);
@@ -152,7 +167,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setIsProfileIncomplete(false);
     setIsCheckingProfile(false);
+    
+    // Clear notifications on logout
+    setNotifications([]);
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      setPollInterval(null);
+    }
   };
+
+  // Notifications functions
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoadingNotifications(true);
+    try {
+      let fetchedNotifications: Notification[] = [];
+      
+      if (user.role === 'ADMIN') {
+        fetchedNotifications = await apiClient.getAllNotificationsForAdmin();
+      } else {
+        fetchedNotifications = await apiClient.getNotifications();
+      }
+      
+      setNotifications(fetchedNotifications);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  }, [user]);
+
+  const markAsRead = useCallback(async (notificationId: string) => {
+    try {
+      await apiClient.markNotificationAsRead(notificationId);
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notificationId ? { ...n, isRead: true } : n
+        )
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  }, []);
+
+  // Polling effect for notifications
+  useEffect(() => {
+    if (!user) return;
+
+    // Initial fetch
+    fetchNotifications();
+
+    // Set up polling interval (5 minutes)
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+    setPollInterval(interval);
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [user, fetchNotifications]);
+
+  // Fetch notifications on route change (for immediate updates)
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [pathname, user, fetchNotifications]);
 
   return (
     <AuthContext.Provider value={{ 
@@ -165,7 +249,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isProfileIncomplete,
       isCheckingProfile,
       completeClientProfile,
-      skipProfileCompletion
+      skipProfileCompletion,
+      // Notifications
+      notifications,
+      unreadCount,
+      fetchNotifications,
+      markAsRead,
+      isLoadingNotifications
     }}>
       {children}
     </AuthContext.Provider>

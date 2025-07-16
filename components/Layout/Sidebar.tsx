@@ -21,9 +21,34 @@ import {
   Menu,
   X,
   FolderOpen,
-  FileText
+  FileText,
+  Bell
 } from 'lucide-react';
 import Image from 'next/image';
+
+// Componente para el badge de notificaciones en el sidebar
+function NotificationBadge({ isActive }: { isActive: boolean }) {
+  const { unreadCount } = useAuth();
+  
+  if (unreadCount === 0) {
+    return isActive ? (
+      <div className="ml-auto h-2 w-2 rounded-full bg-white/80 animate-pulse" />
+    ) : null;
+  }
+  
+  return (
+    <div className="ml-auto">
+      <span className={cn(
+        "inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full min-w-[20px] h-5",
+        isActive 
+          ? "bg-white text-palero-green1" 
+          : "bg-palero-green1 text-white group-hover:bg-white group-hover:text-palero-green1"
+      )}>
+        {unreadCount > 99 ? '99+' : unreadCount}
+      </span>
+    </div>
+  );
+}
 
 const navigationItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, route: '/dashboard' },
@@ -33,6 +58,7 @@ const navigationItems = [
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, route: '/tasks' },
   { name: 'Invoices', href: '/invoices', icon: FileText, route: '/invoices' },
   { name: 'Calendar', href: '/calendar', icon: Calendar, route: '/calendar' },
+  { name: 'Notifications', href: '/notifications', icon: Bell, route: '/notifications' },
   // { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
   // { name: 'Settings', href: '/settings', icon: Settings, route: '/settings' }
 ];
@@ -88,13 +114,15 @@ export function Sidebar() {
         <nav className="space-y-2 px-3">
           {filteredNavigation.map((item) => {
             const isActive = pathname === item.href;
+            const isNotifications = item.href === '/notifications';
+            
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsMobileOpen(false)}
                 className={cn(
-                  "flex items-center space-x-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group",
+                  "flex items-center space-x-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group relative",
                   isActive
                     ? "bg-palero-green1 text-white shadow-lg transform scale-105"
                     : "text-palero-blue1 hover:bg-palero-navy1/60 hover:text-white hover:transform hover:scale-105"
@@ -105,7 +133,13 @@ export function Sidebar() {
                   isActive ? "text-white" : "text-palero-teal1 group-hover:text-white"
                 )} />
                 <span className="font-medium">{item.name}</span>
-                {isActive && (
+                
+                {/* Notification badge */}
+                {isNotifications && user && (
+                  <NotificationBadge isActive={isActive} />
+                )}
+                
+                {isActive && !isNotifications && (
                   <div className="ml-auto h-2 w-2 rounded-full bg-white/80 animate-pulse" />
                 )}
               </Link>
@@ -135,7 +169,7 @@ export function Sidebar() {
         variant="ghost"
         size="sm"
         className={cn(
-          "fixed top-4 z-50 md:hidden bg-palero-navy2/90 text-white hover:bg-palero-navy1 backdrop-blur-sm border border-palero-blue1/30 rounded-xl shadow-lg transition-all duration-300",
+          "fixed top-4 z-[9999] md:hidden bg-palero-navy2/90 text-white hover:bg-palero-navy1 backdrop-blur-sm border border-palero-blue1/30 rounded-xl shadow-lg transition-all duration-300",
           isMobileOpen ? "right-4" : "left-4"
         )}
         onClick={() => setIsMobileOpen(!isMobileOpen)}
@@ -145,7 +179,7 @@ export function Sidebar() {
 
       {/* Mobile sidebar */}
       {isMobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-[9990] md:hidden">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
           <div className="fixed left-0 top-0 h-full w-80 border-r border-palero-blue1/20 shadow-2xl">
             <SidebarContent />

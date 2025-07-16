@@ -132,6 +132,41 @@ export interface Invoice {
   };
 }
 
+// Notification interfaces and types
+export type NotificationType = 
+  | 'NEW_TASK_ASSIGNED'
+  | 'TASK_STATUS_UPDATED'
+  | 'PROJECT_CREATED'
+  | 'PROJECT_STATUS_UPDATED'
+  | 'COMMENT_CREATED'
+  | 'INVOICE_GENERATED'
+  | 'PAYMENT_REMINDER';
+
+export type EntityType = 'TASK' | 'PROJECT' | 'INVOICE' | 'COMMENT';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  message: string;
+  entityType: EntityType;
+  entityId: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationResponse {
+  success: boolean;
+  data: Notification[];
+  message: string;
+}
+
+export interface SingleNotificationResponse {
+  success: boolean;
+  data: Notification;
+  message: string;
+}
+
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
@@ -550,6 +585,24 @@ class ApiClient {
     return this.request<void>(`/invoices/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  // Notifications methods
+  async getNotifications(): Promise<Notification[]> {
+    const response = await this.request<NotificationResponse>('/notifications');
+    return response.data;
+  }
+
+  async markNotificationAsRead(id: string): Promise<Notification> {
+    const response = await this.request<SingleNotificationResponse>(`/notifications/${id}/read`, {
+      method: 'PATCH',
+    });
+    return response.data;
+  }
+
+  async getAllNotificationsForAdmin(): Promise<Notification[]> {
+    const response = await this.request<NotificationResponse>('/notifications/admin/all');
+    return response.data;
   }
 }
 

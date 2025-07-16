@@ -18,6 +18,7 @@ export const rolePermissions: RolePermissions = {
     { resource: 'subtasks', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'comments', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'invoices', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'notifications', actions: ['read'] },
     { resource: 'reports', actions: ['read'] },
     { resource: 'settings', actions: ['read', 'update'] }
   ],
@@ -29,6 +30,7 @@ export const rolePermissions: RolePermissions = {
     { resource: 'subtasks', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'comments', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'invoices', actions: ['create', 'read', 'update'] },
+    { resource: 'notifications', actions: ['read'] },
     { resource: 'reports', actions: ['read'] }
   ],
   CLIENT: [
@@ -36,7 +38,8 @@ export const rolePermissions: RolePermissions = {
     { resource: 'tasks', actions: ['read'] },
     { resource: 'subtasks', actions: ['read'] },
     { resource: 'comments', actions: ['create', 'read'] },
-    { resource: 'invoices', actions: ['read'] }
+    { resource: 'invoices', actions: ['read'] },
+    { resource: 'notifications', actions: ['read'] }
   ]
 };
 
@@ -60,6 +63,7 @@ export function canAccessRoute(userRole: UserRole, route: string): boolean {
     '/invoices': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
     '/calendar': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
     '/reports': ['ADMIN', 'TEAM_MEMBER'],
+    '/notifications': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
     '/settings': ['ADMIN']
   };
 

@@ -2,9 +2,9 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Bell, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export function Header() {
   const { user } = useAuth();
@@ -12,7 +12,7 @@ export function Header() {
   if (!user) return null;
 
   return (
-    <header className="border-b border-palero-blue1/20 bg-gradient-to-r from-white to-palero-blue1/5 backdrop-blur-sm shadow-sm">
+    <header className="border-b border-palero-blue1/20 bg-gradient-to-r from-white to-palero-blue1/5 backdrop-blur-sm shadow-sm relative z-50">
       <div className="flex h-16 items-center px-6 md:px-8">
         <div className="flex-1 flex items-center space-x-4">
           <div className="relative max-w-md flex-1 hidden md:block">
@@ -25,12 +25,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" className="relative hover:bg-palero-blue1/10 text-palero-navy1 rounded-xl transition-all duration-200">
-            <Bell className="h-4 w-4" />
-            <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-palero-green1 animate-pulse shadow-lg">
-              <span className="absolute inset-0 rounded-full bg-palero-green1 animate-ping"></span>
-            </span>
-          </Button>
+          <NotificationBell />
 
           <div className="flex items-center space-x-3 p-2 rounded-xl bg-white/80 backdrop-blur-sm border border-palero-blue1/20 shadow-sm hover:shadow-md transition-all duration-200">
             <Avatar className="h-8 w-8 ring-2 ring-palero-green1/30">
