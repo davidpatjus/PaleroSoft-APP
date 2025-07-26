@@ -52,14 +52,14 @@ function NotificationBadge({ isActive }: { isActive: boolean }) {
 
 const navigationItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, route: '/dashboard' },
+  { name: 'Notifications', href: '/notifications', icon: Bell, route: '/notifications' },
   { name: 'Users', href: '/users', icon: Users, route: '/users' },
   { name: 'Clients', href: '/clients', icon: Building2, route: '/clients' },
   { name: 'Projects', href: '/projects', icon: FolderOpen, route: '/projects' },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, route: '/tasks' },
   { name: 'Invoices', href: '/invoices', icon: FileText, route: '/invoices' },
   { name: 'Calendar', href: '/calendar', icon: Calendar, route: '/calendar' },
-  { name: 'Notifications', href: '/notifications', icon: Bell, route: '/notifications' },
-  // { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
+  { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
   // { name: 'Settings', href: '/settings', icon: Settings, route: '/settings' }
 ];
 

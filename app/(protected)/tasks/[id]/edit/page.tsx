@@ -239,7 +239,7 @@ export default function EditTaskPage() {
                           <SelectValue placeholder="Select a user" />
                         </SelectTrigger>
                         <SelectContent>
-                          {users.map(u => (
+                          {users.filter(u => u.role === 'TEAM_MEMBER').map(u => (
                             <SelectItem key={u.id} value={u.id} className="focus:bg-palero-blue1/10">
                               <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4" />

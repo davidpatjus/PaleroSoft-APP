@@ -23,10 +23,10 @@ export const InvoiceDueAlerts: React.FC<InvoiceDueAlertsProps> = ({ className })
       setLoading(true);
       const data = await apiClient.getInvoices();
       
-      // Filter invoices based on user role
-      let filteredInvoices = data;
+      // Filter invoices based on user role and exclude VOID invoices
+      let filteredInvoices = data.filter(invoice => invoice.status !== 'VOID');
       if (user?.role === 'CLIENT') {
-        filteredInvoices = data.filter(invoice => invoice.clientId === user.id);
+        filteredInvoices = filteredInvoices.filter(invoice => invoice.clientId === user.id);
       }
       
       setInvoices(filteredInvoices);

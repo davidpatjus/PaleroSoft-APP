@@ -217,7 +217,7 @@ export default function CreateTaskPage() {
                           <SelectValue placeholder="Select user" />
                         </SelectTrigger>
                         <SelectContent className="border-palero-blue1/20">
-                          {users.map((user: UserResponse) => (
+                          {users.filter(user => user.role === 'TEAM_MEMBER').map((user: UserResponse) => (
                             <SelectItem 
                               key={user.id} 
                               value={user.id}

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient, Invoice } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,21 +18,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { PlusCircle, MoreHorizontal, FileText, DollarSign, CheckCircle, XCircle } from 'lucide-react';
 import {
   DropdownMenu,
@@ -48,7 +40,7 @@ const InvoicesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'due-soon' | 'overdue'>('all');
+  const [filter, setFilter] = useState<'all' | 'due-soon' | 'overdue' | 'archived'>('all');
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -129,14 +121,21 @@ const InvoicesPage = () => {
     return '';
   };
 
-  const totalAmount = invoices.reduce((acc, inv) => acc + Number(inv.totalAmount), 0);
+  const totalAmount = invoices.filter(inv => inv.status !== 'VOID').reduce((acc, inv) => acc + Number(inv.totalAmount), 0);
   const totalPaid = invoices.filter(inv => inv.status === 'PAID').reduce((acc, inv) => acc + Number(inv.totalAmount), 0);
   const totalPending = totalAmount - totalPaid;
 
   const getFilteredInvoices = () => {
-    if (filter === 'all') return invoices;
+    if (filter === 'archived') {
+      return invoices.filter(invoice => invoice.status === 'VOID');
+    }
     
-    return invoices.filter(invoice => {
+    // For all other filters, exclude VOID invoices
+    const activeInvoices = invoices.filter(invoice => invoice.status !== 'VOID');
+    
+    if (filter === 'all') return activeInvoices;
+    
+    return activeInvoices.filter(invoice => {
       if (invoice.status === 'PAID') return false;
       
       const today = new Date();
@@ -154,14 +153,17 @@ const InvoicesPage = () => {
   };
 
   const filteredInvoices = getFilteredInvoices();
-  const overdueCount = invoices.filter(inv => {
+  const activeInvoices = invoices.filter(inv => inv.status !== 'VOID');
+  const archivedCount = invoices.filter(inv => inv.status === 'VOID').length;
+  
+  const overdueCount = activeInvoices.filter(inv => {
     if (inv.status === 'PAID') return false;
     const today = new Date();
     const due = new Date(inv.dueDate);
     return due < today;
   }).length;
   
-  const dueSoonCount = invoices.filter(inv => {
+  const dueSoonCount = activeInvoices.filter(inv => {
     if (inv.status === 'PAID') return false;
     const today = new Date();
     const due = new Date(inv.dueDate);
@@ -216,7 +218,7 @@ const InvoicesPage = () => {
           onClick={() => setFilter('all')}
           className={filter === 'all' ? 'bg-palero-blue1 hover:bg-palero-blue2' : ''}
         >
-          All ({invoices.length})
+          All ({activeInvoices.length})
         </Button>
         <Button
           variant={filter === 'overdue' ? 'default' : 'outline'}
@@ -233,6 +235,14 @@ const InvoicesPage = () => {
           className={filter === 'due-soon' ? 'bg-yellow-500 hover:bg-yellow-600' : dueSoonCount > 0 ? 'border-yellow-500 text-yellow-600 hover:bg-yellow-50' : ''}
         >
           Due Soon ({dueSoonCount})
+        </Button>
+        <Button
+          variant={filter === 'archived' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilter('archived')}
+          className={filter === 'archived' ? 'bg-gray-500 hover:bg-gray-600' : archivedCount > 0 ? 'border-gray-500 text-gray-600 hover:bg-gray-50' : ''}
+        >
+          Archived ({archivedCount})
         </Button>
       </div>
 
@@ -271,14 +281,16 @@ const InvoicesPage = () => {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>
-              {filter === 'all' ? 'All Invoices' : 
+              {filter === 'all' ? 'Active Invoices' : 
                filter === 'overdue' ? 'Overdue Invoices' : 
-               'Invoices Due Soon'}
+               filter === 'due-soon' ? 'Invoices Due Soon' :
+               'Archived Invoices'}
             </CardTitle>
             <CardDescription>
-              {filter === 'all' ? 'A list of all invoices in the system.' :
+              {filter === 'all' ? 'A list of all active invoices in the system.' :
                filter === 'overdue' ? 'Invoices that have passed their due date.' :
-               'Invoices due within the next 7 days.'}
+               filter === 'due-soon' ? 'Invoices due within the next 7 days.' :
+               'Cancelled or voided invoices for reference.'}
             </CardDescription>
           </div>
         </CardHeader>
@@ -327,7 +339,7 @@ const InvoicesPage = () => {
                 </div>
               </div>
             ))}
-            {filteredInvoices.length === 0 && invoices.length > 0 && (
+            {filteredInvoices.length === 0 && activeInvoices.length > 0 && filter !== 'archived' && (
               <div className="text-center py-12 px-4">
                 <FileText className="h-12 w-12 text-palero-blue1/50 mx-auto mb-4" />
                 <p className="text-palero-navy2 font-medium">
@@ -342,7 +354,16 @@ const InvoicesPage = () => {
                 </p>
               </div>
             )}
-            {invoices.length === 0 && (
+            {filteredInvoices.length === 0 && filter === 'archived' && (
+              <div className="text-center py-12 px-4">
+                <FileText className="h-12 w-12 text-gray-400/50 mx-auto mb-4" />
+                <p className="text-palero-navy2 font-medium">No archived invoices</p>
+                <p className="text-sm text-palero-navy2/70 mt-1">
+                  Cancelled or voided invoices will appear here
+                </p>
+              </div>
+            )}
+            {activeInvoices.length === 0 && invoices.length === 0 && (
               <div className="text-center py-12 px-4">
                 <FileText className="h-12 w-12 text-palero-blue1/50 mx-auto mb-4" />
                 <p className="text-palero-navy2 font-medium">No invoices found</p>
