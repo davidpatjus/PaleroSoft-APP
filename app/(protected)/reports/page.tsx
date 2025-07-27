@@ -1,416 +1,336 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, Users, FolderOpen, CheckSquare, AlertTriangle, Calendar, RefreshCw, Bug, Info } from 'lucide-react';
+import { useState } from 'react';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
-import { ErrorDetailsModal } from '@/components/ErrorDetailsModal';
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TrendingUp, TrendingDown, RefreshCw, AlertTriangle, DollarSign, Briefcase, CheckCircle, Users } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const ReportsPage = () => {
-  const { user } = useAuth();
-  const [dateRange, setDateRange] = useState<string>('30d');
-  const [showErrorDetails, setShowErrorDetails] = useState(false);
-
-  // Calcular rango de fechas basado en la selección
-  const getDateRange = (range: string) => {
-    const end = new Date();
-    const start = new Date();
-    
-    switch (range) {
-      case '7d':
-        start.setDate(end.getDate() - 7);
-        break;
-      case '30d':
-        start.setDate(end.getDate() - 30);
-        break;
-      case '90d':
-        start.setDate(end.getDate() - 90);
-        break;
-      case '1y':
-        start.setFullYear(end.getFullYear() - 1);
-        break;
-      default:
-        start.setDate(end.getDate() - 30);
-    }
-    
-    return { startDate: start, endDate: end };
-  };
-
-  const { startDate, endDate } = getDateRange(dateRange);
-  const { 
-    totalRevenue, 
-    activeProjects, 
-    completedTasks, 
+export default function ReportsPage() {
+  const [dateRange, setDateRange] = useState<{ start?: Date; end?: Date }>({});
+  
+  const {
+    totalRevenue,
+    activeProjects,
+    completedTasks,
     totalClients,
-    isLoading, 
+    revenueChart,
+    projectStatusChart,
+    clientActivity,
+    taskProgress,
+    isLoading,
     error,
-    errorDetails,
-    hasMaxErrors,
-    retryCount,
-    refreshData,
-    resetErrors,
-    lastUpdated
-  } = useAnalyticsData(startDate, endDate);
+    lastUpdated,
+    refreshData
+  } = useAnalyticsData(dateRange.start, dateRange.end);
 
-  // Función para formatear números
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
+  // Colors for charts
+  const CHART_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'];
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('es-ES').format(num);
-  };
-
-  // Componente MetricCard para mostrar métricas
+  // Render metric card
   const MetricCard = ({ 
     title, 
-    value, 
-    change, 
-    changeType, 
+    metric, 
     icon: Icon, 
-    isLoading = false,
-    formatter = formatNumber 
+    color = 'blue' 
   }: { 
     title: string; 
-    value: number; 
-    change: number; 
-    changeType: 'increase' | 'decrease' | 'neutral'; 
+    metric: any; 
     icon: any; 
-    isLoading?: boolean;
-    formatter?: (value: number) => string;
+    color?: string; 
   }) => {
-    const changeIcon = changeType === 'increase' ? TrendingUp : changeType === 'decrease' ? TrendingDown : null;
-    const changeColor = changeType === 'increase' ? 'text-green-600' : changeType === 'decrease' ? 'text-red-600' : 'text-gray-600';
-    
+    if (isLoading) {
+      return (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              <Skeleton className="h-4 w-20" />
+            </CardTitle>
+            <Skeleton className="h-4 w-4 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-16 mb-2" />
+            <Skeleton className="h-4 w-24" />
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
-      <Card className="border-palero-blue1/10 hover:border-palero-blue1/30 transition-all duration-300 hover:shadow-lg">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-palero-navy2">{title}</CardTitle>
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-palero-blue1 to-palero-teal1 flex items-center justify-center">
-            <Icon className="h-4 w-4 text-white" />
-          </div>
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <Icon className={`h-4 w-4 text-${color}-600`} />
         </CardHeader>
         <CardContent>
-          <div className="space-y-1">
-            {isLoading ? (
-              <>
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-4 w-16" />
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-palero-navy1">
-                  {formatter(value)}
-                </div>
-                {change > 0 && changeIcon && (
-                  <div className={cn("flex items-center text-xs", changeColor)}>
-                    {React.createElement(changeIcon, { className: "mr-1 h-3 w-3" })}
-                    {change.toFixed(1)}% desde el período anterior
-                  </div>
-                )}
-                {change === 0 && (
-                  <div className="text-xs text-gray-500">
-                    Sin cambios desde el período anterior
-                  </div>
-                )}
-              </>
-            )}
+          <div className="text-2xl font-bold">
+            {title.includes('Revenue') 
+              ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(metric.value)
+              : metric.value.toLocaleString('en-US')
+            }
           </div>
+          {metric.change !== 0 && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              {metric.changeType === 'increase' ? (
+                <TrendingUp className="mr-1 h-3 w-3 text-green-600" />
+              ) : metric.changeType === 'decrease' ? (
+                <TrendingDown className="mr-1 h-3 w-3 text-red-600" />
+              ) : null}
+              <span className={
+                metric.changeType === 'increase' ? 'text-green-600' :
+                metric.changeType === 'decrease' ? 'text-red-600' :
+                'text-gray-600'
+              }>
+                {metric.change.toFixed(1)}% vs previous period
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
   };
 
-  // Only admins and team members can access reports
-  if (user?.role !== 'ADMIN' && user?.role !== 'TEAM_MEMBER') {
+  if (error) {
     return (
-      <div className="space-y-4 sm:space-y-6 lg:space-y-8 responsive-container">
-        <Alert className="border-red-200 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-700">
-            No tienes permisos para acceder a esta página.
+      <div className="container mx-auto p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Reports & Analytics</h1>
+          <p className="text-gray-600 mt-2">Error loading data</p>
+        </div>
+        
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={refreshData}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  // Mostrar error si hay problemas cargando datos
-  if (error) {
-    return (
-      <div className="space-y-4 sm:space-y-6 lg:space-y-8 responsive-container">
-        {/* Error crítico después de múltiples intentos */}
-        {hasMaxErrors && (
-          <Alert className="border-red-300 bg-red-50">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-700">
-              <div className="space-y-2">
-                <p className="font-semibold">Error crítico en el sistema de reportes</p>
-                <p className="text-sm">
-                  Se han agotado todos los intentos de conexión. El sistema ha intentado reconectarse {retryCount} veces.
-                </p>
-                <div className="flex gap-2 mt-3">
-                  <Button 
-                    onClick={() => setShowErrorDetails(true)}
-                    variant="outline" 
-                    size="sm"
-                    className="border-red-300 text-red-700 hover:bg-red-100"
-                  >
-                    <Bug className="mr-2 h-4 w-4" />
-                    Ver Detalles Técnicos
-                  </Button>
-                  <Button 
-                    onClick={resetErrors}
-                    size="sm"
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Reiniciar Sistema
-                  </Button>
-                </div>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Error temporal con reintentos */}
-        {!hasMaxErrors && (
-          <Alert className="border-yellow-300 bg-yellow-50">
-            <Info className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-yellow-700">
-              <div className="space-y-2">
-                <p className="font-semibold">Problemas de conectividad</p>
-                <p className="text-sm">
-                  Error al cargar los datos (Intento {retryCount}/5): {error}
-                </p>
-                <p className="text-xs text-yellow-600">
-                  El sistema está reintentando automáticamente la conexión...
-                </p>
-                <div className="flex gap-2 mt-3">
-                  <Button 
-                    onClick={refreshData}
-                    variant="outline" 
-                    size="sm"
-                    className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                    disabled={isLoading}
-                  >
-                    <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} />
-                    Reintentar Ahora
-                  </Button>
-                  {errorDetails && (
-                    <Button 
-                      onClick={() => setShowErrorDetails(true)}
-                      variant="ghost" 
-                      size="sm"
-                      className="text-yellow-700"
-                    >
-                      <Bug className="mr-2 h-4 w-4" />
-                      Detalles
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Modal de detalles del error */}
-        <ErrorDetailsModal
-          isOpen={showErrorDetails}
-          onClose={() => setShowErrorDetails(false)}
-          errorDetails={errorDetails}
-          onRetry={() => {
-            setShowErrorDetails(false);
-            resetErrors();
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8 responsive-container">
+    <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-palero-blue1 to-palero-teal1 flex items-center justify-center shadow-lg">
-              <BarChart3 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-palero-navy1">
-                Reports & Analytics
-              </h1>
-              <p className="text-sm sm:text-base text-palero-navy2 mt-1">
-                Análisis completo y métricas de rendimiento para tu negocio.
-              </p>
-            </div>
-          </div>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Reports & Analytics</h1>
+          <p className="text-gray-600 mt-2">Business metrics and statistics dashboard</p>
+          {lastUpdated && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Last updated: {lastUpdated.toLocaleString('en-US')}
+            </p>
+          )}
         </div>
-        
-        {/* Date Range Filter */}
-        <div className="flex-shrink-0">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-palero-navy2" />
-              <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="w-[180px] border-palero-blue1/30 focus:border-palero-green1 focus:ring-palero-green1">
-                  <SelectValue placeholder="Seleccionar período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">Últimos 7 días</SelectItem>
-                  <SelectItem value="30d">Últimos 30 días</SelectItem>
-                  <SelectItem value="90d">Últimos 90 días</SelectItem>
-                  <SelectItem value="1y">Último año</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button 
-              variant="outline" 
-              onClick={refreshData}
-              disabled={isLoading}
-              className="border-palero-blue1/20 hover:bg-palero-blue1/5"
-            >
-              <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} />
-              Actualizar
-            </Button>
-            
-            {lastUpdated && (
-              <span className="text-xs text-gray-500">
-                Última actualización: {lastUpdated.toLocaleTimeString('es-ES')}
-              </span>
-            )}
-          </div>
-        </div>
+        <Button onClick={refreshData} disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
-      {/* Quick Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Métricas principales */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Ingresos Totales"
-          value={totalRevenue.value}
-          change={totalRevenue.change}
-          changeType={totalRevenue.changeType}
+          title="Total Revenue"
+          metric={totalRevenue}
           icon={DollarSign}
-          isLoading={isLoading}
-          formatter={formatCurrency}
+          color="green"
         />
-        
         <MetricCard
-          title="Proyectos Activos"
-          value={activeProjects.value}
-          change={activeProjects.change}
-          changeType={activeProjects.changeType}
-          icon={FolderOpen}
-          isLoading={isLoading}
+          title="Active Projects"
+          metric={activeProjects}
+          icon={Briefcase}
+          color="blue"
         />
-        
         <MetricCard
-          title="Tareas Completadas"
-          value={completedTasks.value}
-          change={completedTasks.change}
-          changeType={completedTasks.changeType}
-          icon={CheckSquare}
-          isLoading={isLoading}
+          title="Completed Tasks"
+          metric={completedTasks}
+          icon={CheckCircle}
+          color="purple"
         />
-        
         <MetricCard
-          title="Total Clientes"
-          value={totalClients.value}
-          change={totalClients.change}
-          changeType={totalClients.changeType}
+          title="Total Clients"
+          metric={totalClients}
           icon={Users}
-          isLoading={isLoading}
+          color="orange"
         />
       </div>
 
-      {/* Gráficos y análisis detallados - Placeholder para futuras fases */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Financial Overview */}
-        <Card className="lg:col-span-2 bg-white/90 backdrop-blur-sm border-palero-blue1/20 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-palero-green2" />
-              Vista Financiera
-            </CardTitle>
-            <CardDescription>
-              Tendencias de ingresos y métricas de rendimiento financiero
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-12 text-palero-navy2">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">Los gráficos de ingresos se implementarán en la Fase 3</p>
-                <Badge variant="outline" className="mt-2">
-                  Próximamente
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Gráficos y análisis detallados */}
+      <Tabs defaultValue="revenue" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="revenue">Revenue</TabsTrigger>
+          <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="clients">Clients</TabsTrigger>
+        </TabsList>
 
-        {/* Project Status Distribution */}
-        <Card className="bg-white/90 backdrop-blur-sm border-palero-blue1/20 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FolderOpen className="h-5 w-5 text-palero-blue1" />
-              Estado de Proyectos
-            </CardTitle>
-            <CardDescription>
-              Distribución del estado de los proyectos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-12 text-palero-navy2">
-              <div className="text-center">
-                <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">Gráfico de distribución en Fase 3</p>
-                <Badge variant="outline" className="mt-2">
-                  Próximamente
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Tab de Ingresos */}
+        <TabsContent value="revenue" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue Evolution</CardTitle>
+              <CardDescription>Monthly revenue vs targets</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-80 w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={revenueChart}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value)), '']} />
+                    <Legend />
+                    <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} name="Revenue" />
+                    <Line type="monotone" dataKey="target" stroke="#82ca9d" strokeWidth={2} strokeDasharray="5 5" name="Target" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Actividad de clientes - Placeholder */}
-      <Card className="bg-white/90 backdrop-blur-sm border-palero-blue1/20 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-palero-teal1" />
-            Actividad de Clientes
-          </CardTitle>
-          <CardDescription>
-            Top clientes por ingresos y actividad reciente
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-12 text-palero-navy2">
-            <div className="text-center">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-sm">Tabla de actividad de clientes se implementará en la Fase 3</p>
-              <Badge variant="outline" className="mt-2">
-                Próximamente
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Tab de Proyectos */}
+        <TabsContent value="projects" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Distribution by Status</CardTitle>
+              <CardDescription>Current status of all projects</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-80 w-full" />
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={projectStatusChart}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ status, percentage }) => `${status}: ${percentage.toFixed(1)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="count"
+                      >
+                        {projectStatusChart.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Summary by Status</h4>
+                    {projectStatusChart.map((status, index) => (
+                      <div key={status.status} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div 
+                            className="w-3 h-3 rounded"
+                            style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                          />
+                          <span className="capitalize">{status.status}</span>
+                        </div>
+                        <Badge variant="secondary">
+                          {status.count} ({status.percentage.toFixed(1)}%)
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab de Tareas */}
+        <TabsContent value="tasks" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Task Progress (Last 7 days)</CardTitle>
+              <CardDescription>Completed vs pending tasks by day</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-80 w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={taskProgress}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="completed" stackId="a" fill="#82ca9d" name="Completed" />
+                    <Bar dataKey="pending" stackId="a" fill="#8884d8" name="Pending" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab de Clientes */}
+        <TabsContent value="clients" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Client Activity</CardTitle>
+              <CardDescription>Top 10 clients by revenue generated</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {clientActivity.map((client, index) => (
+                    <div key={client.clientName} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <Badge variant="outline" className="font-mono">
+                          #{index + 1}
+                        </Badge>
+                        <div>
+                          <h4 className="font-medium">{client.clientName}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {client.projectsCount} project{client.projectsCount !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-600">
+                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(client.totalRevenue)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Last activity: {client.lastActivity}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
-
-export default ReportsPage;
+}
