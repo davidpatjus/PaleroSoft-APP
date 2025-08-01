@@ -62,6 +62,7 @@ export function canAccessRoute(userRole: UserRole, route: string): boolean {
     '/tasks': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
     '/invoices': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
     '/calendar': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
+    '/meetings': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
     '/reports': ['ADMIN', 'TEAM_MEMBER'],
     '/notifications': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
     '/settings': ['ADMIN']

@@ -15,6 +15,7 @@ import {
   Building2,
   CheckSquare,
   Calendar,
+  Video,
   BarChart3,
   Settings,
   LogOut,
@@ -59,6 +60,7 @@ const navigationItems = [
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, route: '/tasks' },
   { name: 'Invoices', href: '/invoices', icon: FileText, route: '/invoices' },
   { name: 'Calendar', href: '/calendar', icon: Calendar, route: '/calendar' },
+  { name: 'Meetings', href: '/meetings', icon: Video, route: '/meetings' },
   { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
   // { name: 'Settings', href: '/settings', icon: Settings, route: '/settings' }
 ];
@@ -84,8 +86,8 @@ export function Sidebar() {
   };
 
   const SidebarContent = () => (
-    <div className="flex h-full flex-col bg-palero-navy2">
-      <div className="flex h-16 items-center border-b border-palero-navy1/20 px-6 bg-palero-navy1">
+    <div className="flex h-full flex-col bg-palero-navy2 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex h-16 py-4 items-center border-b border-palero-navy1/20 px-6 bg-palero-navy1">
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 rounded-xl bg-palero-green1 flex items-center justify-center shadow-lg">
             <Image src="/images/LogoPalerosoft.jpg" width={40} height={40} alt="Logo" className="rounded-xl h-full w-full" />

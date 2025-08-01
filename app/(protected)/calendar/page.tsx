@@ -2,19 +2,43 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient, Task, UserResponse, Project } from '@/lib/api';
+import { apiClient, Task, UserResponse, Project, Invoice, Subtask, ClientProfile, Notification } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Loader2, Clock } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Loader2, Clock, 
+         FileText, CreditCard, CheckSquare, Bell, Target, Users, Briefcase } from 'lucide-react';
+import Link from 'next/link';
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string;
+  type: 'task' | 'subtask' | 'project' | 'invoice' | 'notification';
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+  status?: string;
+  entityId: string;
+  userId?: string;
+  projectId?: string;
+  clientId?: string;
+}
 
 export default function CalendarPage() {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // All data states
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [clients, setClients] = useState<ClientProfile[]>([]);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -22,15 +46,53 @@ export default function CalendarPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [tasksData, usersData, projectsData] = await Promise.all([
-          apiClient.getTasks(),
-          user?.role === 'ADMIN' || user?.role === 'TEAM_MEMBER' ? apiClient.getUsers() : Promise.resolve([]),
-          apiClient.getProjects(),
-        ]);
-
+        
+        // Base data for all roles
+        const tasksData = await apiClient.getTasks();
+        const projectsData = await apiClient.getProjects();
+        
         setTasks(tasksData);
-        setUsers(usersData);
         setProjects(projectsData);
+        
+        // Role-specific data fetching
+        if (user?.role === 'ADMIN') {
+          const [usersData, clientsData, subtasksData, invoicesData, notificationsData] = await Promise.all([
+            apiClient.getUsers(),
+            apiClient.getClients(),
+            apiClient.getSubtasks(),
+            apiClient.getInvoices(),
+            apiClient.getAllNotificationsForAdmin()
+          ]);
+          
+          setUsers(usersData);
+          setClients(clientsData);
+          setSubtasks(subtasksData);
+          setInvoices(invoicesData);
+          setNotifications(notificationsData);
+        } else if (user?.role === 'TEAM_MEMBER') {
+          const [usersData, clientsData, subtasksData, invoicesData, notificationsData] = await Promise.all([
+            apiClient.getUsers(),
+            apiClient.getClients(),
+            apiClient.getSubtasks(),
+            apiClient.getInvoices(),
+            apiClient.getNotifications()
+          ]);
+          
+          setUsers(usersData);
+          setClients(clientsData);
+          setSubtasks(subtasksData);
+          setInvoices(invoicesData);
+          setNotifications(notificationsData);
+        } else if (user?.role === 'CLIENT') {
+          const [invoicesData, notificationsData] = await Promise.all([
+            apiClient.getInvoices(),
+            apiClient.getNotifications()
+          ]);
+          
+          setInvoices(invoicesData);
+          setNotifications(notificationsData);
+        }
+
         setError('');
       } catch (error: any) {
         setError(error.message || 'Failed to fetch data');
@@ -42,9 +104,28 @@ export default function CalendarPage() {
     fetchData();
   }, [user?.role]);
 
-  // Filter tasks based on user role
+  // Filter data based on user role
+  const getFilteredData = () => {
+    const userTasks = getUserTasks();
+    const userSubtasks = getUserSubtasks();
+    const userProjects = getUserProjects();
+    const userInvoices = getUserInvoices();
+    const userNotifications = getUserNotifications();
+    
+    return {
+      tasks: userTasks,
+      subtasks: userSubtasks,
+      projects: userProjects,
+      invoices: userInvoices,
+      notifications: userNotifications
+    };
+  };
+
   const getUserTasks = () => {
-    if (user?.role === 'ADMIN' || user?.role === 'TEAM_MEMBER') {
+    if (user?.role === 'ADMIN') {
+      return tasks;
+    }
+    if (user?.role === 'TEAM_MEMBER') {
       return tasks;
     }
     if (user?.role === 'CLIENT') {
@@ -54,7 +135,139 @@ export default function CalendarPage() {
     return tasks.filter(task => task.assignedToId === user?.id);
   };
 
-  const userTasks = getUserTasks();
+  const getUserSubtasks = () => {
+    if (user?.role === 'ADMIN') {
+      return subtasks;
+    }
+    if (user?.role === 'TEAM_MEMBER') {
+      return subtasks;
+    }
+    if (user?.role === 'CLIENT') {
+      const userTasks = getUserTasks();
+      return subtasks.filter(subtask => userTasks.some(t => t.id === subtask.taskId));
+    }
+    return subtasks.filter(subtask => subtask.assignedToId === user?.id);
+  };
+
+  const getUserProjects = () => {
+    if (user?.role === 'ADMIN') {
+      return projects;
+    }
+    if (user?.role === 'TEAM_MEMBER') {
+      return projects;
+    }
+    if (user?.role === 'CLIENT') {
+      return projects.filter(p => p.clientId === user.id);
+    }
+    return projects;
+  };
+
+  const getUserInvoices = () => {
+    if (user?.role === 'ADMIN') {
+      return invoices;
+    }
+    if (user?.role === 'TEAM_MEMBER') {
+      return invoices;
+    }
+    if (user?.role === 'CLIENT') {
+      return invoices.filter(invoice => invoice.clientId === user.id);
+    }
+    return [];
+  };
+
+  const getUserNotifications = () => {
+    if (user?.role === 'ADMIN') {
+      return notifications;
+    }
+    return notifications.filter(notif => notif.userId === user?.id);
+  };
+
+  // Convert all data to calendar events
+  const getCalendarEvents = (): CalendarEvent[] => {
+    const { tasks: userTasks, subtasks: userSubtasks, projects: userProjects, invoices: userInvoices, notifications: userNotifications } = getFilteredData();
+    const events: CalendarEvent[] = [];
+
+    // Add tasks with due dates
+    userTasks.forEach(task => {
+      if (task.dueDate) {
+        events.push({
+          id: `task-${task.id}`,
+          title: task.title,
+          description: task.description,
+          date: task.dueDate,
+          type: 'task',
+          priority: task.priority,
+          status: task.status,
+          entityId: task.id,
+          userId: task.assignedToId,
+          projectId: task.projectId
+        });
+      }
+    });
+
+    // Add subtasks with due dates
+    userSubtasks.forEach(subtask => {
+      if (subtask.dueDate) {
+        events.push({
+          id: `subtask-${subtask.id}`,
+          title: `↳ ${subtask.title}`,
+          description: subtask.description,
+          date: subtask.dueDate,
+          type: 'subtask',
+          priority: subtask.priority,
+          status: subtask.status,
+          entityId: subtask.id,
+          userId: subtask.assignedToId
+        });
+      }
+    });
+
+    // Add project milestones (start and end dates)
+    userProjects.forEach(project => {
+      // Project start date
+      events.push({
+        id: `project-start-${project.id}`,
+        title: `📅 ${project.name} (Start)`,
+        description: project.description,
+        date: project.startDate,
+        type: 'project',
+        status: project.status,
+        entityId: project.id,
+        clientId: project.clientId
+      });
+
+      // Project end date
+      events.push({
+        id: `project-end-${project.id}`,
+        title: `🏁 ${project.name} (Deadline)`,
+        description: project.description,
+        date: project.endDate,
+        type: 'project',
+        status: project.status,
+        entityId: project.id,
+        clientId: project.clientId
+      });
+    });
+
+    // Add invoice due dates
+    userInvoices.forEach(invoice => {
+      events.push({
+        id: `invoice-${invoice.id}`,
+        title: `💰 Invoice #${invoice.invoiceNumber}`,
+        description: `Due: $${invoice.totalAmount}`,
+        date: invoice.dueDate,
+        type: 'invoice',
+        status: invoice.status,
+        entityId: invoice.id,
+        clientId: invoice.clientId
+      });
+    });
+
+    return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
+
+  const filteredData = getFilteredData();
+  const calendarEvents = getCalendarEvents();
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -64,13 +277,27 @@ export default function CalendarPage() {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  const getTasksForDate = (day: number) => {
+  const getEventsForDate = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return userTasks.filter(task => {
-      if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate).toISOString().split('T')[0];
-      return taskDate === dateStr;
+    return calendarEvents.filter(event => {
+      const eventDate = new Date(event.date).toISOString().split('T')[0];
+      return eventDate === dateStr;
     });
+  };
+
+  const getTodaysEvents = () => {
+    const today = new Date();
+    return getEventsForDate(today.getDate());
+  };
+
+  const getUpcomingEvents = () => {
+    const today = new Date();
+    return calendarEvents
+      .filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate > today;
+      })
+      .slice(0, 10); // Show next 10 events
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -85,6 +312,47 @@ export default function CalendarPage() {
     });
   };
 
+  const getEventIcon = (type: string) => {
+    switch (type) {
+      case 'task': return <Target className="h-3 w-3" />;
+      case 'subtask': return <CheckSquare className="h-3 w-3" />;
+      case 'project': return <Briefcase className="h-3 w-3" />;
+      case 'invoice': return <CreditCard className="h-3 w-3" />;
+      case 'notification': return <Bell className="h-3 w-3" />;
+      default: return <CalendarIcon className="h-3 w-3" />;
+    }
+  };
+
+  const getEventColor = (event: CalendarEvent) => {
+    if (event.type === 'invoice') {
+      if (event.status === 'OVERDUE') return 'bg-red-100 text-red-800 border-l-2 border-red-500';
+      if (event.status === 'PAID') return 'bg-green-100 text-green-800 border-l-2 border-green-500';
+      return 'bg-yellow-100 text-yellow-800 border-l-2 border-yellow-500';
+    }
+    
+    if (event.type === 'project') {
+      if (event.status === 'COMPLETED') return 'bg-green-100 text-green-800 border-l-2 border-green-500';
+      if (event.status === 'IN_PROGRESS') return 'bg-blue-100 text-blue-800 border-l-2 border-blue-500';
+      return 'bg-gray-100 text-gray-800 border-l-2 border-gray-500';
+    }
+    
+    if (event.priority === 'HIGH') return 'bg-red-100 text-red-800 border-l-2 border-red-500';
+    if (event.priority === 'MEDIUM') return 'bg-palero-yellow1/20 text-palero-navy1 border-l-2 border-palero-yellow1';
+    return 'bg-palero-green1/20 text-palero-green2 border-l-2 border-palero-green1';
+  };
+
+  const getUserName = (userId?: string) => {
+    if (!userId) return 'Unassigned';
+    const user = users.find(u => u.id === userId);
+    return user?.name || 'Unknown';
+  };
+
+  const getClientName = (clientId?: string) => {
+    if (!clientId) return 'No client';
+    const client = clients.find(c => c.userId === clientId);
+    return client?.companyName || client?.contactPerson || 'Unknown Client';
+  };
+
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -96,12 +364,6 @@ export default function CalendarPage() {
   const firstDay = getFirstDayOfMonth(currentDate);
   const today = new Date();
   const isCurrentMonth = currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
-
-  const getUserName = (userId?: string) => {
-    if (!userId) return 'Unassigned';
-    const taskUser = users.find(u => u.id === userId);
-    return taskUser?.name || 'Unknown';
-  };
 
   if (isLoading) {
     return (
@@ -120,21 +382,21 @@ export default function CalendarPage() {
       <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div className="min-w-0 flex-1">
           <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold tracking-tight text-palero-navy1 break-words">
-            Calendar
+            Calendar & Events
           </h1>
           <p className="text-xs sm:text-sm lg:text-base text-palero-navy2 mt-1 break-words">
-            View and manage your task schedule
+            Manage your schedule, deadlines, and important dates
           </p>
         </div>
-        <div className="flex-shrink-0 w-full sm:w-auto">
+        {/* <div className="flex-shrink-0 flex gap-2">
           <Button 
             size="sm"
-            className="bg-palero-green1 hover:bg-palero-green2 text-white w-full sm:w-auto text-sm shadow-lg hover:shadow-xl transition-all duration-200"
+            className="bg-palero-green1 hover:bg-palero-green2 text-white text-sm shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Plus className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             New Event
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {error && (
@@ -142,6 +404,57 @@ export default function CalendarPage() {
           <AlertDescription className="text-red-700">{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-palero-blue1/20 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-palero-navy2">Tasks</p>
+                <p className="text-xl font-bold text-palero-navy1">{filteredData.tasks.length}</p>
+              </div>
+              <Target className="h-6 w-6 text-palero-blue1" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-palero-green1/20 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-palero-navy2">Projects</p>
+                <p className="text-xl font-bold text-palero-navy1">{filteredData.projects.length}</p>
+              </div>
+              <Briefcase className="h-6 w-6 text-palero-green1" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-palero-yellow1/20 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-palero-navy2">Invoices</p>
+                <p className="text-xl font-bold text-palero-navy1">{filteredData.invoices.length}</p>
+              </div>
+              <CreditCard className="h-6 w-6 text-palero-yellow1" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-palero-teal1/20 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-palero-navy2">Events</p>
+                <p className="text-xl font-bold text-palero-navy1">{calendarEvents.length}</p>
+              </div>
+              <CalendarIcon className="h-6 w-6 text-palero-teal1" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-4 lg:gap-6 lg:grid-cols-4">
         {/* Calendar Main View */}
@@ -204,7 +517,7 @@ export default function CalendarPage() {
                 {Array.from({ length: daysInMonth }, (_, index) => {
                   const day = index + 1;
                   const isToday = isCurrentMonth && day === today.getDate();
-                  const dayTasks = getTasksForDate(day);
+                  const dayEvents = getEventsForDate(day);
                   
                   return (
                     <div
@@ -221,25 +534,22 @@ export default function CalendarPage() {
                         {day}
                       </div>
                       <div className="space-y-0.5">
-                        {dayTasks.slice(0, isToday ? 3 : 2).map(task => (
+                        {dayEvents.slice(0, isToday ? 3 : 2).map(event => (
                           <div
-                            key={task.id}
-                            className={`text-xs p-0.5 sm:p-1 rounded truncate transition-colors ${
-                              task.priority === 'HIGH' 
-                                ? 'bg-red-100 text-red-800 border-l-2 border-red-500' 
-                                : task.priority === 'MEDIUM'
-                                ? 'bg-palero-yellow1/20 text-palero-navy1 border-l-2 border-palero-yellow1'
-                                : 'bg-palero-green1/20 text-palero-green2 border-l-2 border-palero-green1'
-                            }`}
-                            title={`${task.title} - ${task.priority} priority`}
+                            key={event.id}
+                            className={`text-xs p-0.5 sm:p-1 rounded truncate transition-colors ${getEventColor(event)}`}
+                            title={`${event.title} - ${event.type} ${event.priority ? `(${event.priority})` : ''}`}
                           >
-                            <span className="hidden sm:inline">{task.title}</span>
-                            <span className="sm:hidden">•</span>
+                            <div className="flex items-center gap-1">
+                              {getEventIcon(event.type)}
+                              <span className="hidden sm:inline truncate">{event.title}</span>
+                              <span className="sm:hidden">•</span>
+                            </div>
                           </div>
                         ))}
-                        {dayTasks.length > (isToday ? 3 : 2) && (
+                        {dayEvents.length > (isToday ? 3 : 2) && (
                           <div className="text-xs text-palero-blue1 font-medium">
-                            +{dayTasks.length - (isToday ? 3 : 2)}
+                            +{dayEvents.length - (isToday ? 3 : 2)}
                           </div>
                         )}
                       </div>
@@ -253,96 +563,257 @@ export default function CalendarPage() {
 
         {/* Sidebar */}
         <div className="space-y-4 lg:space-y-6 order-1 lg:order-2">
+          {/* Today's Events */}
           <Card className="border-palero-green1/20 border-2 bg-white/80 backdrop-blur-sm shadow-lg">
             <CardHeader className="border-b border-palero-green1/10 p-3 sm:p-4">
               <CardTitle className="text-palero-navy1 flex items-center gap-2 text-sm sm:text-lg">
                 <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-palero-green1" />
-                <span>Today&apos;s Tasks</span>
+                <span>Today&apos;s Events</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-4">
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 mb-4">
+                  <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+                  <TabsTrigger value="tasks" className="text-xs">Tasks</TabsTrigger>
+                  <TabsTrigger value="projects" className="text-xs">Projects</TabsTrigger>
+                  <TabsTrigger value="invoices" className="text-xs">Bills</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="all" className="space-y-3">
+                  {getTodaysEvents().map(event => (
+                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)}`}>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            {getEventIcon(event.type)}
+                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1">{event.title}</h4>
+                          </div>
+                          {event.priority && (
+                            <Badge className={`text-xs shrink-0 ${
+                              event.priority === 'HIGH' 
+                                ? 'bg-red-500 text-white' 
+                                : event.priority === 'MEDIUM'
+                                ? 'bg-palero-yellow1 text-palero-navy1'
+                                : 'bg-palero-green1 text-white'
+                            }`}>
+                              {event.priority}
+                            </Badge>
+                          )}
+                        </div>
+                        {event.description && (
+                          <p className="text-xs text-palero-navy2 line-clamp-2">{event.description}</p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-palero-navy2">
+                          <span className="font-medium">{event.type.charAt(0).toUpperCase() + event.type.slice(1)}</span>
+                          {event.userId && <span className="truncate">{getUserName(event.userId)}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {getTodaysEvents().length === 0 && (
+                    <div className="text-center py-6 sm:py-8">
+                      <CalendarIcon className="h-8 w-8 sm:h-12 sm:w-12 text-palero-green1/50 mx-auto mb-3" />
+                      <p className="text-xs sm:text-sm text-palero-navy2 font-medium">No events for today</p>
+                      <p className="text-xs text-palero-navy2/70 mt-1">Enjoy your free time!</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="tasks" className="space-y-3">
+                  {getTodaysEvents().filter(e => e.type === 'task' || e.type === 'subtask').map(event => (
+                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)}`}>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            {getEventIcon(event.type)}
+                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1">{event.title}</h4>
+                          </div>
+                          {event.priority && (
+                            <Badge className={`text-xs shrink-0 ${
+                              event.priority === 'HIGH' 
+                                ? 'bg-red-500 text-white' 
+                                : event.priority === 'MEDIUM'
+                                ? 'bg-palero-yellow1 text-palero-navy1'
+                                : 'bg-palero-green1 text-white'
+                            }`}>
+                              {event.priority}
+                            </Badge>
+                          )}
+                        </div>
+                        {event.description && (
+                          <p className="text-xs text-palero-navy2 line-clamp-2">{event.description}</p>
+                        )}
+                        <div className="text-xs text-palero-navy2 flex items-center gap-1">
+                          <span className="font-medium">Assigned:</span>
+                          <span className="truncate">{getUserName(event.userId)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {getTodaysEvents().filter(e => e.type === 'task' || e.type === 'subtask').length === 0 && (
+                    <div className="text-center py-6 sm:py-8">
+                      <Target className="h-8 w-8 sm:h-12 sm:w-12 text-palero-green1/50 mx-auto mb-3" />
+                      <p className="text-xs sm:text-sm text-palero-navy2 font-medium">No tasks due today</p>
+                      <p className="text-xs text-palero-navy2/70 mt-1">All caught up!</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="projects" className="space-y-3">
+                  {getTodaysEvents().filter(e => e.type === 'project').map(event => (
+                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)}`}>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            {getEventIcon(event.type)}
+                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1">{event.title}</h4>
+                          </div>
+                          <Badge className={`text-xs shrink-0 ${
+                            event.status === 'COMPLETED' ? 'bg-green-500 text-white' :
+                            event.status === 'IN_PROGRESS' ? 'bg-blue-500 text-white' :
+                            'bg-gray-500 text-white'
+                          }`}>
+                            {event.status}
+                          </Badge>
+                        </div>
+                        {event.description && (
+                          <p className="text-xs text-palero-navy2 line-clamp-2">{event.description}</p>
+                        )}
+                        <div className="text-xs text-palero-navy2 flex items-center gap-1">
+                          <span className="font-medium">Client:</span>
+                          <span className="truncate">{getClientName(event.clientId)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {getTodaysEvents().filter(e => e.type === 'project').length === 0 && (
+                    <div className="text-center py-6 sm:py-8">
+                      <Briefcase className="h-8 w-8 sm:h-12 sm:w-12 text-palero-green1/50 mx-auto mb-3" />
+                      <p className="text-xs sm:text-sm text-palero-navy2 font-medium">No project milestones today</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="invoices" className="space-y-3">
+                  {getTodaysEvents().filter(e => e.type === 'invoice').map(event => (
+                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)}`}>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            {getEventIcon(event.type)}
+                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1">{event.title}</h4>
+                          </div>
+                          <Badge className={`text-xs shrink-0 ${
+                            event.status === 'PAID' ? 'bg-green-500 text-white' :
+                            event.status === 'OVERDUE' ? 'bg-red-500 text-white' :
+                            'bg-yellow-500 text-white'
+                          }`}>
+                            {event.status}
+                          </Badge>
+                        </div>
+                        {event.description && (
+                          <p className="text-xs text-palero-navy2 line-clamp-2">{event.description}</p>
+                        )}
+                        <div className="text-xs text-palero-navy2 flex items-center gap-1">
+                          <span className="font-medium">Client:</span>
+                          <span className="truncate">{getClientName(event.clientId)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {getTodaysEvents().filter(e => e.type === 'invoice').length === 0 && (
+                    <div className="text-center py-6 sm:py-8">
+                      <CreditCard className="h-8 w-8 sm:h-12 sm:w-12 text-palero-green1/50 mx-auto mb-3" />
+                      <p className="text-xs sm:text-sm text-palero-navy2 font-medium">No invoices due today</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* Upcoming Events */}
+          <Card className="border-palero-teal1/20 border-2 bg-white/80 backdrop-blur-sm shadow-lg">
+            <CardHeader className="border-b border-palero-teal1/10 p-3 sm:p-4">
+              <CardTitle className="text-palero-navy1 text-sm sm:text-lg flex items-center gap-2">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-palero-teal1" />
+                Upcoming Events
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 sm:p-4">
               <div className="space-y-3">
-                {getTasksForDate(today.getDate()).map(task => (
-                  <div key={task.id} className="p-3 bg-gradient-to-r from-palero-green1/5 to-palero-green1/10 rounded-lg border border-palero-green1/20 hover:shadow-md transition-all duration-200">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <h4 className="font-medium text-xs sm:text-sm text-palero-navy1 line-clamp-2 flex-1 pr-2">{task.title}</h4>
-                        <Badge 
-                          className={`text-xs shrink-0 ${
-                            task.priority === 'HIGH' 
-                              ? 'bg-red-500 text-white' 
-                              : task.priority === 'MEDIUM'
-                              ? 'bg-palero-yellow1 text-palero-navy1'
-                              : 'bg-palero-green1 text-white'
-                          }`}
-                        >
-                          {task.priority}
-                        </Badge>
+                {getUpcomingEvents().map(event => (
+                  <div key={event.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-palero-teal1/5 to-palero-teal1/10 rounded-lg border border-palero-teal1/20 hover:shadow-md transition-all duration-200">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {getEventIcon(event.type)}
+                        <p className="text-xs sm:text-sm font-medium text-palero-navy1 truncate">{event.title}</p>
                       </div>
-                      <p className="text-xs text-palero-navy2 line-clamp-2">{task.description}</p>
-                      <div className="text-xs text-palero-navy2 flex items-center gap-1">
-                        <span className="font-medium">Assigned:</span>
-                        <span className="truncate">{getUserName(task.assignedToId)}</span>
-                      </div>
+                      <p className="text-xs text-palero-navy2">
+                        {new Date(event.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: new Date(event.date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                        })}
+                      </p>
                     </div>
+                    {event.priority && (
+                      <Badge className={`text-xs shrink-0 ml-2 ${
+                        event.priority === 'HIGH' 
+                          ? 'bg-red-500 text-white' 
+                          : event.priority === 'MEDIUM'
+                          ? 'bg-palero-yellow1 text-palero-navy1'
+                          : 'bg-palero-green1 text-white'
+                      }`}>
+                        {event.priority}
+                      </Badge>
+                    )}
                   </div>
                 ))}
-                {getTasksForDate(today.getDate()).length === 0 && (
+                {getUpcomingEvents().length === 0 && (
                   <div className="text-center py-6 sm:py-8">
-                    <CalendarIcon className="h-8 w-8 sm:h-12 sm:w-12 text-palero-green1/50 mx-auto mb-3" />
-                    <p className="text-xs sm:text-sm text-palero-navy2 font-medium">No tasks for today</p>
-                    <p className="text-xs text-palero-navy2/70 mt-1">Enjoy your free time!</p>
+                    <Clock className="h-8 w-8 sm:h-12 sm:w-12 text-palero-teal1/50 mx-auto mb-3" />
+                    <p className="text-xs sm:text-sm text-palero-navy2 font-medium">No upcoming events</p>
+                    <p className="text-xs text-palero-navy2/70 mt-1">All clear ahead!</p>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-palero-teal1/20 border-2 bg-white/80 backdrop-blur-sm shadow-lg">
-            <CardHeader className="border-b border-palero-teal1/10 p-3 sm:p-4">
-              <CardTitle className="text-palero-navy1 text-sm sm:text-lg flex items-center gap-2">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-palero-teal1" />
-                Upcoming Deadlines
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4">
-              <div className="space-y-3">
-                {userTasks
-                  .filter(task => task.dueDate && new Date(task.dueDate) > today && task.status !== 'DONE')
-                  .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
-                  .slice(0, 5)
-                  .map(task => (
-                    <div key={task.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-palero-teal1/5 to-palero-teal1/10 rounded-lg border border-palero-teal1/20 hover:shadow-md transition-all duration-200">
-                      <div className="space-y-1 flex-1 min-w-0">
-                        <p className="text-xs sm:text-sm font-medium text-palero-navy1 truncate">{task.title}</p>
-                        <p className="text-xs text-palero-navy2">
-                          Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric'
-                          }) : 'No date'}
-                        </p>
-                      </div>
-                      <Badge className={`text-xs shrink-0 ml-2 ${
-                        task.priority === 'HIGH' 
-                          ? 'bg-red-500 text-white' 
-                          : task.priority === 'MEDIUM'
-                          ? 'bg-palero-yellow1 text-palero-navy1'
-                          : 'bg-palero-green1 text-white'
-                      }`}>
-                        {task.priority}
-                      </Badge>
-                    </div>
-                  ))}
-                {userTasks.filter(task => task.dueDate && new Date(task.dueDate) > today && task.status !== 'DONE').length === 0 && (
-                  <div className="text-center py-6 sm:py-8">
-                    <Clock className="h-8 w-8 sm:h-12 sm:w-12 text-palero-teal1/50 mx-auto mb-3" />
-                    <p className="text-xs sm:text-sm text-palero-navy2 font-medium">No upcoming deadlines</p>
-                    <p className="text-xs text-palero-navy2/70 mt-1">All caught up!</p>
-                  </div>
+            {/* Quick Actions */}
+            {(user?.role === 'ADMIN' || user?.role === 'TEAM_MEMBER') && (
+            <Card className="border-palero-blue1/20 border-2 bg-white/80 backdrop-blur-sm shadow-lg">
+              <CardHeader className="border-b border-palero-blue1/10 p-3 sm:p-4">
+              <CardTitle className="text-palero-navy1 text-sm sm:text-lg">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-2">
+                <Link href="/tasks/create">
+                <Button size="sm" className="w-full justify-start" variant="outline">
+                  <Target className="mr-2 h-4 w-4" />
+                  Create Task
+                </Button>
+                </Link>
+                <Link href="/projects/create">
+                <Button size="sm" className="w-full justify-start" variant="outline">
+                  <Briefcase className="mr-2 h-4 w-4" />
+                  New Project
+                </Button>
+                </Link>
+                {user?.role === 'ADMIN' && (
+                <Link href="/invoices/create">
+                  <Button size="sm" className="w-full justify-start" variant="outline">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Generate Invoice
+                  </Button>
+                </Link>
                 )}
               </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            )}
         </div>
       </div>
     </div>
