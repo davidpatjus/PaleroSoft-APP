@@ -25,7 +25,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <NotificationBell />
+          {/* <NotificationBell /> */}
 
           <div className="flex items-center space-x-3 p-2 rounded-xl bg-white/80 backdrop-blur-sm border border-palero-blue1/20 shadow-sm hover:shadow-md transition-all duration-200">
             <Avatar className="h-8 w-8 ring-2 ring-palero-green1/30">

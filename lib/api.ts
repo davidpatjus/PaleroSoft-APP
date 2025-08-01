@@ -93,9 +93,12 @@ export interface ClientProfile {
   contactPerson?: string;
   phone?: string;
   address?: string;
-  status: 'PROSPECT' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  socialMediaLinks?: any;
+  status: 'PROSPECT' | 'ACTIVE' | 'IN_PROJECT' | 'COMPLETED' | 'ARCHIVED';
   createdAt: string;
   updatedAt: string;
+  // Relaciones
+  user?: UserResponse;
 }
 
 export interface InvoiceItem {
@@ -303,7 +306,7 @@ class ApiClient {
     });
   }
 
-  // Clients endpoints
+  // Clients endpoints (según documentación API)
   async getClients(): Promise<ClientProfile[]> {
     return this.request<ClientProfile[]>('/clients');
   }
@@ -313,31 +316,36 @@ class ApiClient {
   }
 
   async createClient(clientData: {
-    name: string;
-    email: string;
+    userId: string;
+    companyName?: string;
+    contactPerson?: string;
     phone?: string;
     address?: string;
-  }): Promise<Client> {
-    return this.request<Client>('/clients', {
+    socialMediaLinks?: any;
+    status: 'PROSPECT' | 'ACTIVE' | 'IN_PROJECT' | 'COMPLETED' | 'ARCHIVED';
+  }): Promise<ClientProfile> {
+    return this.request<ClientProfile>('/clients', {
       method: 'POST',
       body: JSON.stringify(clientData),
     });
   }
 
   async updateClient(id: string, clientData: Partial<{
-    name: string;
-    email: string;
+    companyName?: string;
+    contactPerson?: string;
     phone?: string;
     address?: string;
-  }>): Promise<Client> {
-    return this.request<Client>(`/clients/${id}`, {
+    socialMediaLinks?: any;
+    status?: 'PROSPECT' | 'ACTIVE' | 'IN_PROJECT' | 'COMPLETED' | 'ARCHIVED';
+  }>): Promise<ClientProfile> {
+    return this.request<ClientProfile>(`/clients/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(clientData),
     });
   }
 
-  async deleteClient(id: string): Promise<void> {
-    return this.request<void>(`/clients/${id}`, {
+  async deleteClient(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/clients/${id}`, {
       method: 'DELETE',
     });
   }

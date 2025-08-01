@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { NotificationDropdown } from './NotificationDropdown';
-import { cn } from '@/lib/utils';
 
 export function NotificationBell() {
   const { unreadCount } = useAuth();
