@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Loader2, Clock, 
-         FileText, CreditCard, CheckSquare, Bell, Target, Users, Briefcase } from 'lucide-react';
+         FileText, CreditCard, CheckSquare, Bell, Target, Users, Briefcase, ExternalLink } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer';
 import Link from 'next/link';
 
 interface CalendarEvent {
@@ -41,6 +42,9 @@ export default function CalendarPage() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  // Drawer state
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -537,8 +541,11 @@ export default function CalendarPage() {
                         {dayEvents.slice(0, isToday ? 3 : 2).map(event => (
                           <div
                             key={event.id}
-                            className={`text-xs p-0.5 sm:p-1 rounded truncate transition-colors ${getEventColor(event)}`}
+                            className={`text-xs p-0.5 sm:p-1 rounded truncate transition-colors ${getEventColor(event)} hover:brightness-110 cursor-pointer`}
                             title={`${event.title} - ${event.type} ${event.priority ? `(${event.priority})` : ''}`}
+                            onClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}
+                            role="button"
+                            aria-label={`Open details for ${event.title}`}
                           >
                             <div className="flex items-center gap-1">
                               {getEventIcon(event.type)}
@@ -582,12 +589,12 @@ export default function CalendarPage() {
                 
                 <TabsContent value="all" className="space-y-3">
                   {getTodaysEvents().map(event => (
-                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)}`}>
+                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)} cursor-pointer`} onClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}>
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
                             {getEventIcon(event.type)}
-                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1">{event.title}</h4>
+                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1 hover:underline">{event.title}</h4>
                           </div>
                           {event.priority && (
                             <Badge className={`text-xs shrink-0 ${
@@ -622,12 +629,12 @@ export default function CalendarPage() {
 
                 <TabsContent value="tasks" className="space-y-3">
                   {getTodaysEvents().filter(e => e.type === 'task' || e.type === 'subtask').map(event => (
-                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)}`}>
+                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)} cursor-pointer`} onClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}>
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
                             {getEventIcon(event.type)}
-                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1">{event.title}</h4>
+                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1 hover:underline">{event.title}</h4>
                           </div>
                           {event.priority && (
                             <Badge className={`text-xs shrink-0 ${
@@ -662,12 +669,12 @@ export default function CalendarPage() {
 
                 <TabsContent value="projects" className="space-y-3">
                   {getTodaysEvents().filter(e => e.type === 'project').map(event => (
-                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)}`}>
+                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)} cursor-pointer`} onClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}>
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
                             {getEventIcon(event.type)}
-                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1">{event.title}</h4>
+                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1 hover:underline">{event.title}</h4>
                           </div>
                           <Badge className={`text-xs shrink-0 ${
                             event.status === 'COMPLETED' ? 'bg-green-500 text-white' :
@@ -697,12 +704,12 @@ export default function CalendarPage() {
 
                 <TabsContent value="invoices" className="space-y-3">
                   {getTodaysEvents().filter(e => e.type === 'invoice').map(event => (
-                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)}`}>
+                    <div key={event.id} className={`p-3 rounded-lg border hover:shadow-md transition-all duration-200 ${getEventColor(event)} cursor-pointer`} onClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}>
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
                             {getEventIcon(event.type)}
-                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1">{event.title}</h4>
+                            <h4 className="font-medium text-xs sm:text-sm line-clamp-2 flex-1 hover:underline">{event.title}</h4>
                           </div>
                           <Badge className={`text-xs shrink-0 ${
                             event.status === 'PAID' ? 'bg-green-500 text-white' :
@@ -744,11 +751,11 @@ export default function CalendarPage() {
             <CardContent className="p-3 sm:p-4">
               <div className="space-y-3">
                 {getUpcomingEvents().map(event => (
-                  <div key={event.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-palero-teal1/5 to-palero-teal1/10 rounded-lg border border-palero-teal1/20 hover:shadow-md transition-all duration-200">
+                  <div key={event.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-palero-teal1/5 to-palero-teal1/10 rounded-lg border border-palero-teal1/20 hover:shadow-md transition-all duration-200 cursor-pointer" onClick={() => { setSelectedEvent(event); setIsDrawerOpen(true); }}>
                     <div className="space-y-1 flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         {getEventIcon(event.type)}
-                        <p className="text-xs sm:text-sm font-medium text-palero-navy1 truncate">{event.title}</p>
+                        <p className="text-xs sm:text-sm font-medium text-palero-navy1 truncate hover:underline">{event.title}</p>
                       </div>
                       <p className="text-xs text-palero-navy2">
                         {new Date(event.date).toLocaleDateString('en-US', {
@@ -816,6 +823,81 @@ export default function CalendarPage() {
             )}
         </div>
       </div>
+      {/* Drawer de detalles del evento */}
+      <Drawer open={isDrawerOpen} onOpenChange={(open) => { if(!open){ setIsDrawerOpen(false); setSelectedEvent(null);} }}>
+        <DrawerContent className="max-h-[85vh] overflow-y-auto">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
+              {selectedEvent && getEventIcon(selectedEvent.type)}
+              {selectedEvent ? selectedEvent.title : 'Event detail'}
+            </DrawerTitle>
+            {selectedEvent && (
+              <DrawerDescription>
+                {new Date(selectedEvent.date).toLocaleString()} · {selectedEvent.type.toUpperCase()} {selectedEvent.priority ? `· Priority: ${selectedEvent.priority}` : ''}
+              </DrawerDescription>
+            )}
+          </DrawerHeader>
+          {selectedEvent && (
+            <div className="px-6 pb-6 space-y-4">
+              {selectedEvent.description && (
+                <div>
+                  <p className="text-sm text-palero-navy2 whitespace-pre-wrap">{selectedEvent.description}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 text-xs sm:text-sm">
+                <div className="space-y-1">
+                  <p className="font-medium text-palero-navy1">Date</p>
+                  <p className="text-palero-navy2">{new Date(selectedEvent.date).toLocaleDateString()}</p>
+                </div>
+                {selectedEvent.status && (
+                  <div className="space-y-1">
+                    <p className="font-medium text-palero-navy1">Status</p>
+                    <p className="text-palero-navy2">{selectedEvent.status}</p>
+                  </div>
+                )}
+                {selectedEvent.priority && (
+                  <div className="space-y-1">
+                    <p className="font-medium text-palero-navy1">Priority</p>
+                    <p className="text-palero-navy2">{selectedEvent.priority}</p>
+                  </div>
+                )}
+                {selectedEvent.userId && (
+                  <div className="space-y-1 col-span-2">
+                    <p className="font-medium text-palero-navy1">Assigned To</p>
+                    <p className="text-palero-navy2">{getUserName(selectedEvent.userId)}</p>
+                  </div>
+                )}
+                {selectedEvent.clientId && (
+                  <div className="space-y-1 col-span-2">
+                    <p className="font-medium text-palero-navy1">Client</p>
+                    <p className="text-palero-navy2">{getClientName(selectedEvent.clientId)}</p>
+                  </div>
+                )}
+              </div>
+              <div className="pt-2">
+                {(() => {
+                  let href: string | null = null;
+                  if (selectedEvent.type === 'task') href = `/tasks/${selectedEvent.entityId}/edit`;
+                  else if (selectedEvent.type === 'subtask') href = `/tasks/${selectedEvent.projectId || ''}`; // TODO: ajustar ruta real de subtask
+                  else if (selectedEvent.type === 'project') href = `/projects/${selectedEvent.entityId}`;
+                  else if (selectedEvent.type === 'invoice') href = `/invoices/${selectedEvent.entityId}`;
+                  if (href) {
+                    return (
+                      <Link href={href} className="inline-flex items-center text-sm text-palero-blue1 hover:underline font-medium">
+                        Open related page <ExternalLink className="h-4 w-4 ml-1" />
+                      </Link>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
+          )}
+          <DrawerFooter>
+            <Button variant="outline" onClick={() => { setIsDrawerOpen(false); setSelectedEvent(null); }}>Close</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
