@@ -54,7 +54,7 @@ export default function NotificationsPage() {
           </div>
           
           <div className="flex items-center gap-2">
-            {unreadCount > 0 && (
+            {/* {unreadCount > 0 && (
               <Button
                 onClick={handleMarkAllAsRead}
                 variant="outline"
@@ -64,7 +64,7 @@ export default function NotificationsPage() {
                 <CheckCheck className="h-4 w-4 mr-2" />
                 Mark all as read
               </Button>
-            )}
+            )} */}
             
             <Button
               onClick={handleRefresh}

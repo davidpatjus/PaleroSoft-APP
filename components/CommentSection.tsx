@@ -116,12 +116,12 @@ export function CommentSection({ projectId, taskId }: CommentSectionProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Comentarios</CardTitle>
+        <CardTitle>Comments</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmitComment} className="space-y-4 mb-6">
           <Textarea
-            placeholder="Escribe un comentario..."
+            placeholder="Write a comment..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             rows={3}
@@ -131,7 +131,7 @@ export function CommentSection({ projectId, taskId }: CommentSectionProps) {
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Comentar
+              Comment
             </Button>
           </div>
         </form>
@@ -152,7 +152,7 @@ export function CommentSection({ projectId, taskId }: CommentSectionProps) {
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold">{commentUser?.name || 'Usuario desconocido'}</p>
+                      <p className="font-semibold">{commentUser?.name || 'User Unknown'}</p>
                       <div className="flex items-center space-x-2">
                         <p className="text-xs text-muted-foreground">
                           {new Date(comment.createdAt).toLocaleString()}
@@ -167,11 +167,11 @@ export function CommentSection({ projectId, taskId }: CommentSectionProps) {
                             <DropdownMenuContent>
                               <DropdownMenuItem onClick={() => setEditingComment(comment)}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                Editar
+                                Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDeleteComment(comment.id)} className="text-red-500">
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
+                                Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -186,8 +186,8 @@ export function CommentSection({ projectId, taskId }: CommentSectionProps) {
                           rows={3}
                         />
                         <div className="flex justify-end space-x-2">
-                          <Button type="button" variant="ghost" onClick={() => setEditingComment(null)}>Cancelar</Button>
-                          <Button type="submit">Guardar</Button>
+                          <Button type="button" variant="ghost" onClick={() => setEditingComment(null)}>Cancel</Button>
+                          <Button type="submit">Save</Button>
                         </div>
                       </form>
                     ) : (
@@ -198,7 +198,7 @@ export function CommentSection({ projectId, taskId }: CommentSectionProps) {
               );
             })
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">No hay comentarios aún.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">No comments yet.</p>
           )}
         </div>
       </CardContent>
