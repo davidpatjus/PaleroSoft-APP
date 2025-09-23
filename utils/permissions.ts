@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT';
+export type UserRole = 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
 
 export interface Permission {
   resource: string;
@@ -40,6 +40,12 @@ export const rolePermissions: RolePermissions = {
     { resource: 'comments', actions: ['create', 'read'] },
     { resource: 'invoices', actions: ['read'] },
     { resource: 'notifications', actions: ['read'] }
+  ],
+  FAST_CLIENT: [
+    { resource: 'projects', actions: ['read'] },
+    { resource: 'tasks', actions: ['read'] },
+    { resource: 'invoices', actions: ['read'] },
+    { resource: 'notifications', actions: ['read'] }
   ]
 };
 
@@ -55,16 +61,16 @@ export function hasPermission(
 
 export function canAccessRoute(userRole: UserRole, route: string): boolean {
   const routePermissions = {
-    '/dashboard': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
+    '/dashboard': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
     '/users': ['ADMIN'],
     '/clients': ['ADMIN', 'TEAM_MEMBER'],
-    '/projects': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
-    '/tasks': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
-    '/invoices': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
-    '/calendar': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
-    '/meetings': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
+    '/projects': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
+    '/tasks': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
+    '/invoices': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
+    '/calendar': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
+    '/meetings': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
     '/reports': ['ADMIN', 'TEAM_MEMBER'],
-    '/notifications': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'],
+    '/notifications': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
     '/settings': ['ADMIN']
   };
 

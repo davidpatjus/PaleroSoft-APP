@@ -8,7 +8,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT';
+  role: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
   createdAt: string;
   updatedAt: string;
 }
@@ -95,11 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await apiClient.getCurrentUser();
       setUser(userData);
       
-      // Si el usuario es CLIENT, verificar si tiene perfil completo
+      // Si el usuario es CLIENT (pero no FAST_CLIENT), verificar si tiene perfil completo
       if (userData.role === 'CLIENT') {
         await checkClientProfile(userData.id);
       } else {
-        // Si no es CLIENT, asegurar que el estado esté en false
+        // Si no es CLIENT regular, asegurar que el estado esté en false
+        // FAST_CLIENT no necesita completar perfil
         setIsProfileIncomplete(false);
         setIsCheckingProfile(false);
       }
