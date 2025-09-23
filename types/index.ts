@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT';
+  role: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
   createdAt: string;
   updatedAt: string;
 }
@@ -16,7 +16,7 @@ export interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-export type UserRole = 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT';
+export type UserRole = 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
 
 export interface Permission {
   resource: string;

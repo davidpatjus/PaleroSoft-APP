@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import FastClientWidget from '@/components/widgets/FastClientWidget';
+import { PlusCircle, Trash2, ArrowLeft, Plus } from 'lucide-react';
 
 const invoiceItemSchema = z.object({
   description: z.string().min(1, "Description is required"),
@@ -34,10 +35,11 @@ type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 const CreateInvoicePage = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const [clientUsers, setClientUsers] = useState<UserResponse[]>([]);
+  const [clientUsers, setClientUsers] = useState<Array<{id: string; name: string; email?: string}>>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showFastClientWidget, setShowFastClientWidget] = useState(false);
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
@@ -50,34 +52,56 @@ const CreateInvoicePage = () => {
     },
   });
 
+  // Set automatic due date (7 days from today)
+  useEffect(() => {
+    const today = new Date();
+    const dueDate = new Date(today);
+    dueDate.setDate(today.getDate() + 7);
+    
+    form.setValue('dueDate', dueDate.toISOString().split('T')[0]);
+  }, [form]);
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      try {
-        setIsLoading(true);
-        const [usersData, projectData] = await Promise.all([
-          apiClient.getUsers(),
-          apiClient.getProjects(),
-        ]);
-        
-        // Filtrar solo usuarios con rol CLIENT
-        const clientUsersFiltered = usersData.filter(u => u.role === 'CLIENT');
-        setClientUsers(clientUsersFiltered);
-        setProjects(projectData);
-      } catch (err) {
-        console.error("Failed to fetch users or projects", err);
-        setError("Failed to load initial data.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+      const [clientProfiles, projectData] = await Promise.all([
+        apiClient.getClients(),
+        apiClient.getProjects(),
+      ]);
+      
+      // Mapear perfiles de clientes a formato compatible
+      const clientUsersFormatted = clientProfiles.map((profile: any) => ({
+        id: profile.userId || profile.id, // Use userId for invoice creation
+        name: profile.companyName || profile.user?.name || 'Unnamed Client',
+        email: profile.user?.email || ''
+      }));
+      
+      setClientUsers(clientUsersFormatted);
+      setProjects(projectData);
+    } catch (err) {
+      console.error("Failed to fetch clients or projects", err);
+      setError("Failed to load initial data.");
+    } finally {
+      setIsLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleFastClientCreated = (client: { id: string; name: string }) => {
+    // Refresh clients list to include the new fast client
+    fetchData();
+    form.setValue('clientId', client.id);
+    setShowFastClientWidget(false);
+  };
 
   const onSubmit = async (data: InvoiceFormValues) => {
     if (!user) return;
@@ -131,20 +155,48 @@ const CreateInvoicePage = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Client</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a client" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {clientUsers.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.name} ({client.email})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-3">
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a client" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {clientUsers.map((client) => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.name} {client.email && `(${client.email})`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          
+                          {/* Fast Client Widget Toggle */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-palero-navy2">
+                              Need to create a new client?
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowFastClientWidget(!showFastClientWidget)}
+                              className="border-palero-teal1/30 text-palero-teal1 hover:bg-palero-teal1/10"
+                            >
+                              <Plus className="mr-1 h-3 w-3" />
+                              Quick Client
+                            </Button>
+                          </div>
+                          
+                          {/* Fast Client Widget */}
+                          {showFastClientWidget && (
+                            <FastClientWidget
+                              onClientCreated={handleFastClientCreated}
+                              onError={(error) => setError(error)}
+                              className="mt-2"
+                            />
+                          )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

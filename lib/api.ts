@@ -22,7 +22,7 @@ export interface UserResponse {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT';
+  role: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
   createdAt: string;
   updatedAt: string;
 }
@@ -292,9 +292,18 @@ class ApiClient {
     email: string;
     password: string;
     fullName: string;
-    role?: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT';
+    role?: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
   }): Promise<UserResponse> {
     return this.request<UserResponse>('/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async createFastClient(userData: {
+    name: string;
+  }): Promise<UserResponse> {
+    return this.request<UserResponse>('/users/fast-client', {
       method: 'POST',
       body: JSON.stringify(userData),
     });

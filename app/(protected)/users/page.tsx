@@ -82,6 +82,8 @@ export default function UsersPage() {
         return 'bg-palero-blue1/10 text-palero-blue2 border-palero-blue1/20';
       case 'CLIENT': 
         return 'bg-palero-green1/10 text-palero-green2 border-palero-green1/20';
+      case 'FAST_CLIENT': 
+        return 'bg-palero-yellow1/10 text-palero-yellow2 border-palero-yellow1/20';
       default: 
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -92,6 +94,7 @@ export default function UsersPage() {
       case 'ADMIN': return 'Admin';
       case 'TEAM_MEMBER': return 'Team Member';
       case 'CLIENT': return 'Client';
+      case 'FAST_CLIENT': return 'Fast Client';
       default: return role;
     }
   };
@@ -137,7 +140,7 @@ export default function UsersPage() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-2 lg:grid-cols-5">
         <Card className="border-palero-blue1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
             <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Total Users</CardTitle>
@@ -193,6 +196,21 @@ export default function UsersPage() {
               {users.filter((u: UserResponse) => u.role === 'CLIENT').length}
             </div>
             <p className="text-xs text-palero-navy2">external clients</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-palero-yellow1/20 border-2 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-palero-navy1">Fast Clients</CardTitle>
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-palero-yellow1 to-palero-yellow2 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+              <Plus className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-xl sm:text-3xl font-bold text-palero-yellow2 mb-1">
+              {users.filter((u: UserResponse) => u.role === 'FAST_CLIENT').length}
+            </div>
+            <p className="text-xs text-palero-navy2">internal clients</p>
           </CardContent>
         </Card>
       </div>

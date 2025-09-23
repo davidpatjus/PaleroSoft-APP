@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
@@ -17,7 +17,7 @@ export default function CreateUserPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'ADMIN' | 'TEAM_MEMBER' | 'CLIENT'>('CLIENT');
+  const [role, setRole] = useState<'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT'>('CLIENT');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -25,25 +25,42 @@ export default function CreateUserPage() {
   const { user } = useAuth();
   const router = useRouter();
 
+  // Clear email and password when FAST_CLIENT is selected
+  useEffect(() => {
+    if (role === 'FAST_CLIENT') {
+      setEmail('');
+      setPassword('');
+    }
+  }, [role]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setIsLoading(true);
 
-    if (password.length < 6) {
+    // Validation for regular users (not FAST_CLIENT)
+    if (role !== 'FAST_CLIENT' && password.length < 6) {
       setError('Password must be at least 6 characters long');
       setIsLoading(false);
       return;
     }
 
     try {
-      await apiClient.createUser({
-        fullName,
-        email,
-        password,
-        role,
-      });
+      if (role === 'FAST_CLIENT') {
+        // Create fast client with only name
+        await apiClient.createFastClient({
+          name: fullName,
+        });
+      } else {
+        // Create regular user with email and password
+        await apiClient.createUser({
+          fullName,
+          email,
+          password,
+          role,
+        });
+      }
 
       setSuccess('User created successfully!');
       
@@ -129,8 +146,12 @@ export default function CreateUserPage() {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     placeholder="Enter email address"
                     className="border-palero-blue1/30 focus:border-palero-teal1 focus:ring-palero-teal1"
-                    required
+                    required={role !== 'FAST_CLIENT'}
+                    disabled={role === 'FAST_CLIENT'}
                   />
+                  {role === 'FAST_CLIENT' && (
+                    <p className="text-xs text-palero-navy2/70">Email not required for Fast Client</p>
+                  )}
                 </div>
               </div>
 
@@ -145,7 +166,8 @@ export default function CreateUserPage() {
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                       placeholder="Enter password"
                       className="border-palero-blue1/30 focus:border-palero-teal1 focus:ring-palero-teal1 pr-10"
-                      required
+                      required={role !== 'FAST_CLIENT'}
+                      disabled={role === 'FAST_CLIENT'}
                     />
                     <Button
                       type="button"
@@ -153,6 +175,7 @@ export default function CreateUserPage() {
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-palero-teal1/10 text-palero-navy2"
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={role === 'FAST_CLIENT'}
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -161,17 +184,22 @@ export default function CreateUserPage() {
                       )}
                     </Button>
                   </div>
-                  <p className="text-xs text-palero-navy2/70">Minimum 6 characters required</p>
+                  {role === 'FAST_CLIENT' ? (
+                    <p className="text-xs text-palero-navy2/70">Password not required for Fast Client</p>
+                  ) : (
+                    <p className="text-xs text-palero-navy2/70">Minimum 6 characters required</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="role" className="text-palero-navy1 font-semibold">Role</Label>
-                  <Select value={role} onValueChange={(value: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT') => setRole(value)}>
+                  <Select value={role} onValueChange={(value: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT') => setRole(value)}>
                     <SelectTrigger className="border-palero-blue1/30 focus:border-palero-teal1 focus:ring-palero-teal1">
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent className="border-palero-blue1/20">
                       <SelectItem value="CLIENT" className="hover:bg-palero-green1/10">Client</SelectItem>
+                      <SelectItem value="FAST_CLIENT" className="hover:bg-palero-yellow1/10">Fast Client</SelectItem>
                       <SelectItem value="TEAM_MEMBER" className="hover:bg-palero-blue1/10">Team Member</SelectItem>
                       <SelectItem value="ADMIN" className="hover:bg-red-50">Admin</SelectItem>
                     </SelectContent>
@@ -183,6 +211,7 @@ export default function CreateUserPage() {
                 <Label className="text-sm font-semibold text-palero-navy1">Role Permissions</Label>
                 <div className={`p-4 rounded-xl border-2 transition-all duration-200 ${
                   role === 'CLIENT' ? 'bg-palero-green1/10 border-palero-green1/20' :
+                  role === 'FAST_CLIENT' ? 'bg-palero-yellow1/10 border-palero-yellow1/20' :
                   role === 'TEAM_MEMBER' ? 'bg-palero-blue1/10 border-palero-blue1/20' :
                   'bg-red-50 border-red-200'
                 }`}>
@@ -194,6 +223,16 @@ export default function CreateUserPage() {
                           <p>• Can view assigned projects and tasks</p>
                           <p>• Can create comments and track progress</p>
                           <p>• Limited to own project data</p>
+                        </div>
+                      </div>
+                    )}
+                    {role === 'FAST_CLIENT' && (
+                      <div className="text-palero-yellow2">
+                        <p className="font-medium mb-1">Fast Client Permissions:</p>
+                        <div className="space-y-1">
+                          <p>• Internal client for project assignment</p>
+                          <p>• No login access to the system</p>
+                          <p>• For administrative use only</p>
                         </div>
                       </div>
                     )}

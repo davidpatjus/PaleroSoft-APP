@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Building2, User, Phone, MapPin, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,16 +12,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/utils/permissions';
+import { apiClient } from '@/lib/api';
 import useClients from '@/hooks/clients/useClients';
 import Link from 'next/link';
 
 export default function CreateClientPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { createClient, getAvailableUsersForClientProfile, users, isLoading: clientsLoading } = useClients();
+  const { createClient, updateClient, getClientByUserId, getAvailableUsersForClientProfile, users, isLoading: clientsLoading, fetchClients } = useClients();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [userType, setUserType] = useState<'existing' | 'new_fast_client'>('existing');
+  const [fastClientName, setFastClientName] = useState('');
   const [formData, setFormData] = useState({
     userId: '',
     companyName: '',
@@ -32,7 +35,19 @@ export default function CreateClientPage() {
     socialMediaLinks: {}
   });
 
+  // Auto-fill company name when fast client name changes
+  useEffect(() => {
+    if (userType === 'new_fast_client' && fastClientName.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        companyName: fastClientName.trim(),
+        contactPerson: fastClientName.trim()
+      }));
+    }
+  }, [fastClientName, userType]);
+
   const canCreate = hasPermission(user!.role, 'clients', 'create');
+  const availableUsers = getAvailableUsersForClientProfile();
 
   if (!canCreate) {
     return (
@@ -44,8 +59,6 @@ export default function CreateClientPage() {
       </div>
     );
   }
-
-  const availableUsers = getAvailableUsersForClientProfile();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -61,9 +74,30 @@ export default function CreateClientPage() {
     setError('');
 
     try {
-      // Validations
-      if (!formData.userId) {
-        throw new Error('You must select a user');
+      let userId = formData.userId;
+
+      // If creating a new fast client, create the user first
+      if (userType === 'new_fast_client') {
+        if (!fastClientName.trim()) {
+          throw new Error('Fast client name is required');
+        }
+
+        try {
+          const newFastClient = await apiClient.createFastClient({
+            name: fastClientName.trim()
+          });
+          userId = newFastClient.id;
+          
+          // Refresh the users list to include the new fast client
+          await fetchClients();
+        } catch (err: any) {
+          throw new Error(`Failed to create fast client: ${err.message}`);
+        }
+      } else {
+        // Validation for existing user
+        if (!formData.userId) {
+          throw new Error('You must select a user');
+        }
       }
 
       if (!formData.companyName.trim()) {
@@ -74,7 +108,43 @@ export default function CreateClientPage() {
         throw new Error('Contact person is required');
       }
 
-      const result = await createClient(formData);
+      let result;
+      
+      // Check if the user already has a client profile (especially for new fast clients)
+      if (userType === 'new_fast_client') {
+        try {
+          const existingProfileResult = await getClientByUserId(userId);
+          if (existingProfileResult.success && existingProfileResult.data) {
+            // Update existing profile
+            result = await updateClient(existingProfileResult.data.id, {
+              companyName: formData.companyName,
+              contactPerson: formData.contactPerson,
+              phone: formData.phone,
+              address: formData.address,
+              status: formData.status,
+              socialMediaLinks: formData.socialMediaLinks
+            });
+          } else {
+            // Create new profile
+            result = await createClient({
+              ...formData,
+              userId
+            });
+          }
+        } catch (err) {
+          // If getClientByUserId fails, try to create (fallback)
+          result = await createClient({
+            ...formData,
+            userId
+          });
+        }
+      } else {
+        // For existing users, always create new profile
+        result = await createClient({
+          ...formData,
+          userId
+        });
+      }
       
       if (result.success) {
         router.push('/clients');
@@ -113,7 +183,7 @@ export default function CreateClientPage() {
               New Client
             </h1>
             <p className="text-sm sm:text-base text-palero-navy2 mt-1">
-              Create a client profile for an existing user
+              Create a client profile for an existing user or create a new fast client
             </p>
           </div>
         </div>
@@ -124,48 +194,129 @@ export default function CreateClientPage() {
           </Alert>
         )}
 
-        {availableUsers.length === 0 && (
-          <Alert className="border-yellow-200 bg-yellow-50 text-yellow-800">
-            <AlertDescription className="text-yellow-700">
-              No users with CLIENT role available to create profiles. 
-              You must first create users with CLIENT role.
-            </AlertDescription>
-          </Alert>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* User Type Selection */}
+          <Card className="bg-white/80 backdrop-blur-sm border-palero-blue1/20">
+            <CardHeader>
+              <CardTitle className="flex items-center text-palero-navy1">
+                <User className="mr-2 h-5 w-5" />
+                User Type
+              </CardTitle>
+              <CardDescription>Choose how to create the client user account</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                    userType === 'existing' 
+                      ? 'border-palero-green1 bg-palero-green1/10' 
+                      : 'border-gray-200 hover:border-palero-green1/50'
+                  }`}
+                  onClick={() => {
+                    setUserType('existing');
+                    setFastClientName('');
+                  }}
+                >
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      name="userType"
+                      value="existing"
+                      checked={userType === 'existing'}
+                      onChange={() => setUserType('existing')}
+                      className="text-palero-green1 focus:ring-palero-green1"
+                    />
+                    <div>
+                      <h3 className="font-medium text-palero-navy1">Existing User</h3>
+                      <p className="text-sm text-palero-navy2">Select from users with CLIENT role</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div 
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                    userType === 'new_fast_client' 
+                      ? 'border-palero-yellow1 bg-palero-yellow1/10' 
+                      : 'border-gray-200 hover:border-palero-yellow1/50'
+                  }`}
+                  onClick={() => {
+                    setUserType('new_fast_client');
+                    setFormData(prev => ({ ...prev, userId: '' }));
+                  }}
+                >
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      name="userType"
+                      value="new_fast_client"
+                      checked={userType === 'new_fast_client'}
+                      onChange={() => setUserType('new_fast_client')}
+                      className="text-palero-yellow1 focus:ring-palero-yellow1"
+                    />
+                    <div>
+                      <h3 className="font-medium text-palero-navy1">New Fast Client</h3>
+                      <p className="text-sm text-palero-navy2">Create internal client (no login access)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* User Selection/Creation */}
           <Card className="bg-white/80 backdrop-blur-sm border-palero-green1/20">
             <CardHeader>
               <CardTitle className="flex items-center text-palero-navy1">
                 <User className="mr-2 h-5 w-5" />
-                User Information
+                {userType === 'existing' ? 'User Selection' : 'Fast Client Information'}
               </CardTitle>
-              <CardDescription>Select the user for whom to create the client profile</CardDescription>
+              <CardDescription>
+                {userType === 'existing' 
+                  ? 'Select the user for whom to create the client profile' 
+                  : 'Enter the name for the new fast client'
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="userId">User *</Label>
-                <Select value={formData.userId} onValueChange={(value) => handleInputChange('userId', value)}>
-                  <SelectTrigger className="border-palero-green1/30 focus:border-palero-teal1">
-                    <SelectValue placeholder="Select a user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableUsers.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 text-palero-navy2" />
-                          <span>{user.name} - {user.email}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {availableUsers.length === 0 && (
-                  <p className="text-sm text-palero-navy2">
-                    No users available. Only users with CLIENT role who don&apos;t have a profile can be selected.
+              {userType === 'existing' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="userId">User *</Label>
+                  <Select value={formData.userId} onValueChange={(value) => handleInputChange('userId', value)}>
+                    <SelectTrigger className="border-palero-green1/30 focus:border-palero-teal1">
+                      <SelectValue placeholder="Select a user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <div className="flex items-center space-x-2">
+                            <Mail className="h-4 w-4 text-palero-navy2" />
+                            <span>{user.name} - {user.email}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {availableUsers.length === 0 && (
+                    <p className="text-sm text-palero-navy2">
+                      No users available. Only users with CLIENT role who don&apos;t have a profile can be selected.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="fastClientName">Fast Client Name *</Label>
+                  <Input
+                    id="fastClientName"
+                    value={fastClientName}
+                    onChange={(e) => setFastClientName(e.target.value)}
+                    className="border-palero-yellow1/30 focus:border-palero-yellow1"
+                    placeholder="e.g. ABC Company Ltd."
+                  />
+                  <p className="text-xs text-palero-navy2">
+                    This will be used as both the user name and default company name
                   </p>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -247,7 +398,7 @@ export default function CreateClientPage() {
           <div className="flex flex-col sm:flex-row gap-3 pt-6">
             <Button
               type="submit"
-              disabled={isSubmitting || availableUsers.length === 0}
+              disabled={isSubmitting || (userType === 'existing' && availableUsers.length === 0)}
               className="bg-palero-green1 hover:bg-palero-green2 text-white"
             >
               {isSubmitting ? 'Creating...' : 'Create Client'}

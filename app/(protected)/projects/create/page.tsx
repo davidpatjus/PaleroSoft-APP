@@ -11,8 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import FastClientWidget from '@/components/widgets/FastClientWidget';
 import Link from 'next/link';
-import { ArrowLeft, FolderPlus, Calendar, Users, FileText, Settings } from 'lucide-react';
+import { ArrowLeft, FolderPlus, Calendar, Users, FileText, Settings, Plus } from 'lucide-react';
 
 const statusOptions = [
   { value: 'PENDING', label: 'Pending' },
@@ -32,22 +33,45 @@ export default function CreateProjectPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showFastClientWidget, setShowFastClientWidget] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
 
+  // Set automatic dates
+  useEffect(() => {
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    setStartDate(today.toISOString().split('T')[0]);
+    setEndDate(nextWeek.toISOString().split('T')[0]);
+  }, []);
+
   // Load clients on mount
   useEffect(() => {
-    async function fetchClients() {
-      try {
-        const users = await apiClient.getUsers();
-        setClients(users.filter((u: any) => u.role === 'CLIENT'));
-      } catch (e) {
-        setError('Could not load clients');
-      }
-    }
     fetchClients();
   }, []);
+
+  const fetchClients = async () => {
+    try {
+      const clientProfiles = await apiClient.getClients();
+      const formattedClients = clientProfiles.map((profile: any) => ({
+        id: profile.id,
+        name: profile.companyName || profile.user?.name || 'Unnamed Client'
+      }));
+      setClients(formattedClients);
+    } catch (e) {
+      setError('Could not load clients');
+    }
+  };
+
+  const handleFastClientCreated = (client: { id: string; name: string }) => {
+    // Refresh clients list to include the new fast client
+    fetchClients();
+    setClientId(client.id);
+    setShowFastClientWidget(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +104,7 @@ export default function CreateProjectPage() {
       <div className="min-h-screen bg-gradient-to-br from-palero-blue1/5 via-white to-palero-green1/5 px-4 py-8">
         <div className="max-w-2xl mx-auto">
           <Alert className="border-red-200 bg-red-50">
-            <AlertDescription className="text-red-700">You don't have permission to access this page.</AlertDescription>
+            <AlertDescription className="text-red-700">You don&apos;t have permission to access this page.</AlertDescription>
           </Alert>
         </div>
       </div>
@@ -228,25 +252,53 @@ export default function CreateProjectPage() {
                         <Users className="mr-2 h-4 w-4 text-palero-green1" />
                         Client
                       </Label>
-                      <Select value={clientId} onValueChange={setClientId} required>
-                        <SelectTrigger 
-                          id="project-client"
-                          className="border-palero-blue1/30 focus:border-palero-green1 focus:ring-palero-green1 bg-white"
-                        >
-                          <SelectValue placeholder="Select client" />
-                        </SelectTrigger>
-                        <SelectContent className="border-palero-blue1/20">
-                          {clients.map((client: { id: string; name: string }) => (
-                            <SelectItem 
-                              key={client.id} 
-                              value={client.id}
-                              className="hover:bg-palero-green1/10 focus:bg-palero-green1/10"
-                            >
-                              {client.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="space-y-3">
+                        <Select value={clientId} onValueChange={setClientId} required>
+                          <SelectTrigger 
+                            id="project-client"
+                            className="border-palero-blue1/30 focus:border-palero-green1 focus:ring-palero-green1 bg-white"
+                          >
+                            <SelectValue placeholder="Select client" />
+                          </SelectTrigger>
+                          <SelectContent className="border-palero-blue1/20">
+                            {clients.map((client: { id: string; name: string }) => (
+                              <SelectItem 
+                                key={client.id} 
+                                value={client.id}
+                                className="hover:bg-palero-green1/10 focus:bg-palero-green1/10"
+                              >
+                                {client.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        {/* Fast Client Widget Toggle */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-palero-navy2">
+                            Need to create a new client?
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowFastClientWidget(!showFastClientWidget)}
+                            className="border-palero-teal1/30 text-palero-teal1 hover:bg-palero-teal1/10"
+                          >
+                            <Plus className="mr-1 h-3 w-3" />
+                            Quick Client
+                          </Button>
+                        </div>
+                        
+                        {/* Fast Client Widget */}
+                        {showFastClientWidget && (
+                          <FastClientWidget
+                            onClientCreated={handleFastClientCreated}
+                            onError={(error) => setError(error)}
+                            className="mt-2"
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
 
