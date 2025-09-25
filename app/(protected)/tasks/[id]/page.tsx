@@ -8,6 +8,7 @@ import { apiClient } from '@/lib/api';
 import { Task, Project, UserResponse } from '@/lib/api';
 import { hasPermission } from '@/utils/permissions';
 import { CommentSection } from '@/components/CommentSection';
+import { SubtasksSection } from '@/components/SubtasksSection';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -351,6 +352,9 @@ export default function TaskDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Subtasks Section */}
+        <SubtasksSection taskId={taskId} />
 
         {/* Comments Section */}
         <Card className="bg-white/90 backdrop-blur-sm border-palero-green1/20 shadow-lg">
