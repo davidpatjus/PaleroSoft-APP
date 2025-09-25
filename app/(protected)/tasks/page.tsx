@@ -240,16 +240,27 @@ export default function TasksPage() {
     getStatusColor: (status: string) => string;
     onDelete: (taskId: string) => void;
     onSelect: (task: Task) => void;
-  }) => (
+  }) => {
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent navigation when clicking on action buttons
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) {
+      return;
+    }
+    window.location.href = `/tasks/${task.id}`;
+  };
+
+  return (
     <div
       data-task-id={task.id}
       draggable={canUpdate && !isUpdating}
       onDragStart={(e) => onDragStart(e, task.id)}
       onDragEnd={onDragEnd}
+      onClick={handleCardClick}
       className={`
         group relative p-4 border-l-4 rounded-xl transition-all duration-200 
         ${getStatusColor(task.status)}
-        ${canUpdate && !isUpdating ? 'cursor-move hover:shadow-xl hover:scale-[1.02]' : 'cursor-default'}
+        ${canUpdate && !isUpdating ? 'cursor-move hover:shadow-xl hover:scale-[1.02]' : 'cursor-pointer hover:shadow-lg hover:scale-[1.01]'}
         ${isUpdating ? 'opacity-50 animate-pulse' : ''}
         backdrop-blur-sm border-r border-t border-b border-gray-200/20
       `}
@@ -313,15 +324,16 @@ export default function TasksPage() {
 
         {/* Action buttons */}
         <div className="flex items-center justify-between pt-2 border-t border-gray-200/20 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onSelect(task)}
-            className="h-7 px-2 text-xs text-palero-blue1 hover:bg-palero-blue1/10"
-          >
-            <Eye className="h-3 w-3 mr-1" />
-            View
-          </Button>
+          <Link href={`/tasks/${task.id}`}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-palero-blue1 hover:bg-palero-blue1/10"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              View
+            </Button>
+          </Link>
           
           <div className="flex items-center space-x-1">
             {canUpdate && (
@@ -339,7 +351,10 @@ export default function TasksPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onDelete(task.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(task.id);
+                }}
                 className="h-7 px-2 text-xs text-red-500 hover:bg-red-50"
               >
                 <Trash2 className="h-3 w-3" />
@@ -350,6 +365,7 @@ export default function TasksPage() {
       </div>
     </div>
   );
+};
 
   const KanbanColumn = ({ title, status, tasks }: { title: string; status: string; tasks: Task[] }) => (
     <div className="w-full min-w-0 md:min-w-72 lg:min-w-80 md:flex-1">
@@ -572,7 +588,17 @@ export default function TasksPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {userTasks.map((task: Task) => (
-                        <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-palero-blue1/20 rounded-lg bg-gradient-to-r from-white to-palero-blue1/5 hover:shadow-md transition-all duration-200">
+                        <div 
+                          key={task.id} 
+                          onClick={(e) => {
+                            // Prevent navigation when clicking on action buttons
+                            if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) {
+                              return;
+                            }
+                            window.location.href = `/tasks/${task.id}`;
+                          }}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-palero-blue1/20 rounded-lg bg-gradient-to-r from-white to-palero-blue1/5 hover:shadow-md transition-all duration-200 cursor-pointer"
+                        >
                           <div className="space-y-2 flex-1">
                             <div className="flex items-start space-x-2">
                               <h4 className="font-semibold text-palero-navy1 flex-1">{task.title}</h4>
@@ -601,9 +627,16 @@ export default function TasksPage() {
                             <div className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusColors(task.status)}`}>
                               {task.status.toLowerCase().replace('_', ' ')}
                             </div>
+                            <Link href={`/tasks/${task.id}`}>
+                              <Button variant="outline" size="sm" className="border-palero-blue1/30 text-palero-blue1 hover:bg-palero-blue1/10">
+                                <Eye className="mr-1 h-3 w-3" />
+                                View
+                              </Button>
+                            </Link>
                             {canUpdate && (
                               <Link href={`/tasks/${task.id}/edit`}>
-                                <Button variant="outline" size="sm" className="border-palero-blue1/30 text-palero-blue1 hover:bg-palero-blue1/10">
+                                <Button variant="outline" size="sm" className="border-palero-teal1/30 text-palero-teal1 hover:bg-palero-teal1/10">
+                                  <Edit className="mr-1 h-3 w-3" />
                                   Edit
                                 </Button>
                               </Link>
@@ -612,9 +645,13 @@ export default function TasksPage() {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                onClick={() => handleDeleteTask(task.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTask(task.id);
+                                }}
                                 className="border-red-200 text-red-600 hover:bg-red-50"
                               >
+                                <Trash2 className="mr-1 h-3 w-3" />
                                 Delete
                               </Button>
                             )}
