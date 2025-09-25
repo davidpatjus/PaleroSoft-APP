@@ -53,9 +53,11 @@ import {
 
 interface SubtasksSectionProps {
   taskId: string;
+  projectId: string;
+  clientId: string;
 }
 
-export function SubtasksSection({ taskId }: SubtasksSectionProps) {
+export function SubtasksSection({ taskId, projectId, clientId }: SubtasksSectionProps) {
   // NOTE: Comments are not supported for subtasks in the current backend implementation.
   // The comments table only has relationships with tasks and projects, not subtasks.
   // This component focuses on subtask management without comment functionality.
@@ -96,7 +98,23 @@ export function SubtasksSection({ taskId }: SubtasksSectionProps) {
       // Filter subtasks for current task
       const taskSubtasks = allSubtasks.filter(subtask => subtask.taskId === taskId);
       setSubtasks(taskSubtasks.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
-      setUsers(usersData);
+      
+      // Filter users to show only project-relevant users:
+      // - ADMIN: Can be assigned to any task in any project
+      // - TEAM_MEMBER: Internal team members who can work on any project
+      // - CLIENT: Only the specific client of this project (not other clients)
+      // - FAST_CLIENT: Excluded as they typically don't get assigned to subtasks
+      const projectRelevantUsers = usersData.filter(user => {
+        if (user.role === 'ADMIN' || user.role === 'TEAM_MEMBER') {
+          return true;
+        }
+        if (user.role === 'CLIENT' && user.id === clientId) {
+          return true;
+        }
+        return false;
+      });
+      
+      setUsers(projectRelevantUsers);
     } catch (err: any) {
       setError(err.message || 'Failed to load subtasks.');
     } finally {
@@ -107,7 +125,7 @@ export function SubtasksSection({ taskId }: SubtasksSectionProps) {
   // Fetch data on mount
   useEffect(() => {
     fetchData();
-  }, [taskId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [taskId, projectId, clientId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetForm = () => {
     setFormData({

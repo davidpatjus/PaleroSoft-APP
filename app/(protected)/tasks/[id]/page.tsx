@@ -354,7 +354,13 @@ export default function TaskDetailPage() {
         </div>
 
         {/* Subtasks Section */}
-        <SubtasksSection taskId={taskId} />
+        {task && project && (
+          <SubtasksSection 
+            taskId={taskId} 
+            projectId={task.projectId} 
+            clientId={project.clientId} 
+          />
+        )}
 
         {/* Comments Section */}
         <Card className="bg-white/90 backdrop-blur-sm border-palero-green1/20 shadow-lg">
