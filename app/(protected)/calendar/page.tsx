@@ -11,6 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Loader2, Clock, 
          FileText, CreditCard, CheckSquare, Bell, Target, Users, Briefcase, ExternalLink } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 
 interface CalendarEvent {
@@ -45,6 +50,18 @@ export default function CalendarPage() {
   // Drawer state
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Quick Action Modal state
+  const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [quickActionForm, setQuickActionForm] = useState({
+    title: '',
+    description: '',
+    priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
+    projectId: '',
+    assignedToId: '',
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -357,6 +374,64 @@ export default function CalendarPage() {
     return client?.companyName || client?.contactPerson || 'Unknown Client';
   };
 
+  // Quick Action handlers
+  const handleDateDoubleClick = (day: number) => {
+    if (user?.role === 'ADMIN' || user?.role === 'TEAM_MEMBER') {
+      const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      setSelectedDate(clickedDate);
+      setIsQuickActionOpen(true);
+      resetQuickActionForm();
+    }
+  };
+
+  const resetQuickActionForm = () => {
+    setQuickActionForm({
+      title: '',
+      description: '',
+      priority: 'MEDIUM',
+      projectId: '',
+      assignedToId: '',
+    });
+  };
+
+  const handleQuickTaskCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickActionForm.title.trim() || !quickActionForm.projectId || !selectedDate) {
+      return;
+    }
+
+    setIsCreatingTask(true);
+    try {
+      const dueDate = selectedDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      
+      await apiClient.createTask({
+        projectId: quickActionForm.projectId,
+        title: quickActionForm.title.trim(),
+        description: quickActionForm.description.trim() || undefined,
+        priority: quickActionForm.priority,
+        status: 'TODO',
+        dueDate: dueDate,
+        assignedToId: quickActionForm.assignedToId === 'unassigned' ? undefined : quickActionForm.assignedToId || undefined,
+      });
+
+      // Refresh data to show the new task
+      window.location.reload(); // Simple refresh - could be optimized to just refetch data
+      
+      setIsQuickActionOpen(false);
+      resetQuickActionForm();
+      setSelectedDate(null);
+    } catch (error: any) {
+      console.error('Failed to create task:', error);
+      // Could add toast notification here
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
+
+  const getAvailableUsers = () => {
+    return users.filter(user => user.role === 'ADMIN' || user.role === 'TEAM_MEMBER');
+  };
+
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -531,13 +606,15 @@ export default function CalendarPage() {
                           ? 'bg-gradient-to-br from-palero-blue1/20 to-palero-blue1/10 border-palero-blue1 shadow-sm' 
                           : 'border-palero-blue1/10 hover:border-palero-blue1/20'
                       }`}
+                      onDoubleClick={() => handleDateDoubleClick(day)}
+                      title={dayEvents.length === 0 && (user?.role === 'ADMIN' || user?.role === 'TEAM_MEMBER') ? 'Double click to create quick task' : ''}
                     >
                       <div className={`text-xs sm:text-sm font-medium mb-1 ${
                         isToday ? 'text-palero-blue2 font-bold' : 'text-palero-navy1'
                       }`}>
                         {day}
                       </div>
-                      <div className="space-y-0.5">
+                      <div className="space-y-0.5 relative">
                         {dayEvents.slice(0, isToday ? 3 : 2).map(event => (
                           <div
                             key={event.id}
@@ -557,6 +634,14 @@ export default function CalendarPage() {
                         {dayEvents.length > (isToday ? 3 : 2) && (
                           <div className="text-xs text-palero-blue1 font-medium">
                             +{dayEvents.length - (isToday ? 3 : 2)}
+                          </div>
+                        )}
+                        {/* Quick Action Indicator for empty dates */}
+                        {dayEvents.length === 0 && (user?.role === 'ADMIN' || user?.role === 'TEAM_MEMBER') && (
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
+                            <div className="bg-palero-green1/80 text-white rounded-full p-1 shadow-md">
+                              <Plus className="h-3 w-3" />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -823,6 +908,146 @@ export default function CalendarPage() {
             )}
         </div>
       </div>
+      {/* Quick Action Modal */}
+      <Dialog open={isQuickActionOpen} onOpenChange={(open) => { if(!open){ setIsQuickActionOpen(false); setSelectedDate(null); resetQuickActionForm();} }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-palero-navy1 flex items-center gap-2">
+              <Plus className="h-5 w-5 text-palero-green1" />
+              Quick Task Creation
+            </DialogTitle>
+            <DialogDescription className="text-palero-navy2">
+              {selectedDate && (
+                <>Create a new task for <strong>{selectedDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}</strong></>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleQuickTaskCreate} className="space-y-4">
+            <div>
+              <Label htmlFor="quick-title" className="text-sm font-medium text-palero-navy1">
+                Task Title <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="quick-title"
+                placeholder="Enter task title..."
+                value={quickActionForm.title}
+                onChange={(e) => setQuickActionForm(prev => ({ ...prev, title: e.target.value }))}
+                className="border-palero-blue1/30 focus:border-palero-blue1 mt-1"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="quick-description" className="text-sm font-medium text-palero-navy1">
+                Description
+              </Label>
+              <Textarea
+                id="quick-description"
+                placeholder="Task description (optional)..."
+                value={quickActionForm.description}
+                onChange={(e) => setQuickActionForm(prev => ({ ...prev, description: e.target.value }))}
+                className="border-palero-blue1/30 focus:border-palero-blue1 mt-1"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="quick-priority" className="text-sm font-medium text-palero-navy1">
+                  Priority
+                </Label>
+                <Select
+                  value={quickActionForm.priority}
+                  onValueChange={(value: 'LOW' | 'MEDIUM' | 'HIGH') => 
+                    setQuickActionForm(prev => ({ ...prev, priority: value }))
+                  }
+                >
+                  <SelectTrigger className="border-palero-blue1/30 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LOW">🟢 Low</SelectItem>
+                    <SelectItem value="MEDIUM">🟡 Medium</SelectItem>
+                    <SelectItem value="HIGH">🔴 High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="quick-project" className="text-sm font-medium text-palero-navy1">
+                  Project <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={quickActionForm.projectId}
+                  onValueChange={(value) => setQuickActionForm(prev => ({ ...prev, projectId: value }))}
+                >
+                  <SelectTrigger className="border-palero-blue1/30 mt-1">
+                    <SelectValue placeholder="Select project..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredData.projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="quick-assign" className="text-sm font-medium text-palero-navy1">
+                Assign To
+              </Label>
+              <Select
+                value={quickActionForm.assignedToId}
+                onValueChange={(value) => setQuickActionForm(prev => ({ ...prev, assignedToId: value }))}
+              >
+                <SelectTrigger className="border-palero-blue1/30 mt-1">
+                  <SelectValue placeholder="Assign to someone (optional)..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {getAvailableUsers().map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsQuickActionOpen(false);
+                  setSelectedDate(null);
+                  resetQuickActionForm();
+                }}
+                className="border-palero-blue1/30 text-palero-blue1 hover:bg-palero-blue1/10"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isCreatingTask || !quickActionForm.title.trim() || !quickActionForm.projectId}
+                className="bg-palero-green1 hover:bg-palero-green2 text-white"
+              >
+                {isCreatingTask && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Create Task
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Drawer de detalles del evento */}
       <Drawer open={isDrawerOpen} onOpenChange={(open) => { if(!open){ setIsDrawerOpen(false); setSelectedEvent(null);} }}>
         <DrawerContent className="max-h-[85vh] overflow-y-auto">
@@ -877,7 +1102,7 @@ export default function CalendarPage() {
               <div className="pt-2">
                 {(() => {
                   let href: string | null = null;
-                  if (selectedEvent.type === 'task') href = `/tasks/${selectedEvent.entityId}/edit`;
+                  if (selectedEvent.type === 'task') href = `/tasks/${selectedEvent.entityId}`;
                   else if (selectedEvent.type === 'subtask') href = `/tasks/${selectedEvent.projectId || ''}`; // TODO: ajustar ruta real de subtask
                   else if (selectedEvent.type === 'project') href = `/projects/${selectedEvent.entityId}`;
                   else if (selectedEvent.type === 'invoice') href = `/invoices/${selectedEvent.entityId}`;
