@@ -116,10 +116,8 @@ export function Sidebar() {
         <nav className="space-y-2 px-3">
           {filteredNavigation.map((item) => {
             const isNotifications = item.href === '/notifications';
-            // For notifications, also consider admin panel as active
-            const isActive = isNotifications 
-              ? pathname === item.href || pathname.startsWith('/notifications/admin')
-              : pathname === item.href;
+            // Use startsWith to match parent routes (e.g., /projects matches /projects/create, /projects/123/edit)
+            const isActive = pathname.startsWith(item.href);
             
             return (
               <Link

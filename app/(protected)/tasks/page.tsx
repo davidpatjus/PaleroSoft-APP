@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient, Task, UserResponse, Project } from '@/lib/api';
 import { hasPermission } from '@/utils/permissions';
@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Calendar, CheckSquare, Clock, AlertCircle, Loader2, Kanban, List, Target, BarChart3 } from 'lucide-react';
+import { Plus, Calendar, CheckSquare, Clock, AlertCircle, Loader2, Kanban, List, Target, BarChart3, GripVertical, Eye, Edit, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { dragAndDrop } from '@formkit/drag-and-drop';
 import Link from 'next/link';
 
 export default function TasksPage() {
@@ -18,9 +19,16 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  
+  // Refs for drag and drop columns
+  const todoRef = useRef<HTMLDivElement>(null);
+  const inProgressRef = useRef<HTMLDivElement>(null);
+  const reviewRef = useRef<HTMLDivElement>(null);
+  const doneRef = useRef<HTMLDivElement>(null);
 
   const canCreate = hasPermission(user!.role, 'tasks', 'create');
   const canUpdate = hasPermission(user!.role, 'tasks', 'update');
@@ -137,28 +145,60 @@ export default function TasksPage() {
     }
   };
 
-  const handleDragStart = (taskId: string) => {
-    setDraggedTask(taskId);
+  // Enhanced drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    e.dataTransfer.setData('text/plain', taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Add visual feedback
+    const dragElement = e.currentTarget as HTMLElement;
+    setTimeout(() => {
+      dragElement.style.opacity = '0.5';
+      dragElement.style.transform = 'rotate(3deg) scale(1.05)';
+      dragElement.classList.add('dragging');
+    }, 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    const dragElement = e.currentTarget as HTMLElement;
+    dragElement.style.opacity = '1';
+    dragElement.style.transform = 'rotate(0deg) scale(1)';
+    dragElement.classList.remove('dragging');
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    // Add visual feedback to drop zone
+    const dropZone = e.currentTarget as HTMLElement;
+    dropZone.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    const dropZone = e.currentTarget as HTMLElement;
+    dropZone.classList.remove('drag-over');
   };
 
   const handleDrop = async (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
-    if (draggedTask && canUpdate) {
+    const taskId = e.dataTransfer.getData('text/plain');
+    const dropZone = e.currentTarget as HTMLElement;
+    dropZone.classList.remove('drag-over');
+    
+    if (taskId && canUpdate && newStatus) {
+      setIsUpdating(taskId);
       try {
-        await apiClient.updateTask(draggedTask, { 
+        await apiClient.updateTask(taskId, { 
           status: newStatus as 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE' 
         });
-        setTasks(prev => prev.map(t => t.id === draggedTask ? { ...t, status: newStatus as Task['status'] } : t));
-        // await fetchData(); // Opcional: mantener sincronización con backend
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus as Task['status'] } : t));
       } catch (error: any) {
         setError(error.message || 'Failed to update task');
+      } finally {
+        setIsUpdating(null);
       }
     }
-    setDraggedTask(null);
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -170,6 +210,146 @@ export default function TasksPage() {
       setError(error.message || 'Error al eliminar la tarea');
     }
   };
+
+  // Enhanced Task Card Component
+  const TaskCard = ({ 
+    task, 
+    onDragStart, 
+    onDragEnd,
+    canUpdate, 
+    canDelete, 
+    isUpdating,
+    getUserName,
+    getProjectName,
+    getPriorityIcon,
+    getPriorityColors,
+    getStatusColor,
+    onDelete,
+    onSelect
+  }: {
+    task: Task;
+    onDragStart: (e: React.DragEvent, taskId: string) => void;
+    onDragEnd: (e: React.DragEvent) => void;
+    canUpdate: boolean;
+    canDelete: boolean;
+    isUpdating: boolean;
+    getUserName: (userId?: string) => string;
+    getProjectName: (projectId: string) => string;
+    getPriorityIcon: (priority: string) => React.ReactNode;
+    getPriorityColors: (priority: string) => string;
+    getStatusColor: (status: string) => string;
+    onDelete: (taskId: string) => void;
+    onSelect: (task: Task) => void;
+  }) => (
+    <div
+      data-task-id={task.id}
+      draggable={canUpdate && !isUpdating}
+      onDragStart={(e) => onDragStart(e, task.id)}
+      onDragEnd={onDragEnd}
+      className={`
+        group relative p-4 border-l-4 rounded-xl transition-all duration-200 
+        ${getStatusColor(task.status)}
+        ${canUpdate && !isUpdating ? 'cursor-move hover:shadow-xl hover:scale-[1.02]' : 'cursor-default'}
+        ${isUpdating ? 'opacity-50 animate-pulse' : ''}
+        backdrop-blur-sm border-r border-t border-b border-gray-200/20
+      `}
+    >
+      {/* Loading overlay */}
+      {isUpdating && (
+        <div className="absolute inset-0 bg-white/50 rounded-xl flex items-center justify-center z-10">
+          <Loader2 className="h-5 w-5 animate-spin text-palero-blue1" />
+        </div>
+      )}
+
+      {/* Drag handle */}
+      {canUpdate && !isUpdating && (
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <GripVertical className="h-4 w-4 text-palero-navy2/50" />
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <div className="flex items-start justify-between">
+          <h4 className="font-semibold text-sm leading-tight text-palero-navy1 line-clamp-2 flex-1 pr-8">
+            {task.title}
+          </h4>
+          <div className="flex-shrink-0">
+            {getPriorityIcon(task.priority)}
+          </div>
+        </div>
+        
+        <p className="text-xs text-palero-navy2 line-clamp-2 leading-relaxed">
+          {task.description}
+        </p>
+
+        <div className="flex flex-wrap items-center gap-1">
+          <div className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-palero-blue1/10 text-palero-blue2 border border-palero-blue1/20">
+            {getProjectName(task.projectId)}
+          </div>
+          <div className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${getPriorityColors(task.priority)}`}>
+            {task.priority}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Avatar className="h-6 w-6 border border-palero-blue1/20 ring-2 ring-white/50">
+              <AvatarFallback className="bg-gradient-to-br from-palero-blue1 to-palero-teal1 text-white text-xs">
+                {getUserName(task.assignedToId).split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs text-palero-navy2 truncate font-medium">
+              {getUserName(task.assignedToId)}
+            </span>
+          </div>
+          
+          <div className="flex items-center space-x-1 text-xs text-palero-navy2">
+            <Calendar className="h-3 w-3" />
+            <span className="truncate">
+              {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
+            </span>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-200/20 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onSelect(task)}
+            className="h-7 px-2 text-xs text-palero-blue1 hover:bg-palero-blue1/10"
+          >
+            <Eye className="h-3 w-3 mr-1" />
+            View
+          </Button>
+          
+          <div className="flex items-center space-x-1">
+            {canUpdate && (
+              <Link href={`/tasks/${task.id}/edit`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-palero-teal1 hover:bg-palero-teal1/10"
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+              </Link>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(task.id)}
+                className="h-7 px-2 text-xs text-red-500 hover:bg-red-50"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const KanbanColumn = ({ title, status, tasks }: { title: string; status: string; tasks: Task[] }) => (
     <div className="w-full min-w-0 md:min-w-72 lg:min-w-80 md:flex-1">
@@ -186,59 +366,29 @@ export default function TasksPage() {
           </div>
         </CardHeader>
         <CardContent
-          className="space-y-3 min-h-48 md:min-h-80 lg:min-h-96 px-3 sm:px-6"
+          className="space-y-3 min-h-48 md:min-h-80 lg:min-h-96 px-3 sm:px-6 transition-all duration-200"
+          data-status={status}
           onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, status)}
         >
           {tasks.map((task: Task) => (
-            <div
+            <TaskCard
               key={task.id}
-              draggable={canUpdate}
-              onDragStart={() => handleDragStart(task.id)}
-              className={`p-3 sm:p-4 border-l-4 rounded-lg cursor-move transition-all hover:shadow-lg hover:scale-[1.02] ${getStatusColor(task.status)}`}
-            >
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex items-start justify-between">
-                  <h4 className="font-semibold text-xs sm:text-sm leading-tight text-palero-navy1 line-clamp-2 flex-1 pr-2">
-                    {task.title}
-                  </h4>
-                  {getPriorityIcon(task.priority)}
-                </div>
-                
-                <p className="text-xs text-palero-navy2 line-clamp-2">
-                  {task.description}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-1">
-                  <div className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-palero-blue1/10 text-palero-blue2 border border-palero-blue1/20">
-                    {getProjectName(task.projectId)}
-                  </div>
-                  <div className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${getPriorityColors(task.priority)}`}>
-                    {task.priority}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="h-5 w-5 sm:h-6 sm:w-6 border border-palero-blue1/20">
-                      <AvatarFallback className="bg-gradient-to-br from-palero-blue1 to-palero-teal1 text-white text-xs">
-                        {getUserName(task.assignedToId).split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-palero-navy2 truncate">
-                      {getUserName(task.assignedToId)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-1 text-xs text-palero-navy2">
-                    <Calendar className="h-3 w-3" />
-                    <span className="truncate">
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+              task={task}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+              isUpdating={isUpdating === task.id}
+              getUserName={getUserName}
+              getProjectName={getProjectName}
+              getPriorityIcon={getPriorityIcon}
+              getPriorityColors={getPriorityColors}
+              getStatusColor={getStatusColor}
+              onDelete={handleDeleteTask}
+              onSelect={setSelectedTask}
+            />
           ))}
           {tasks.length === 0 && (
             <div className="text-center py-6 sm:py-8 text-palero-navy2/70">
