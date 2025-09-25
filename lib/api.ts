@@ -159,9 +159,25 @@ export interface Notification {
   createdAt: string;
 }
 
+// Extended notification interface for admin view with user info
+export interface AdminNotification extends Notification {
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
+  };
+}
+
 export interface NotificationResponse {
   success: boolean;
   data: Notification[];
+  message: string;
+}
+
+export interface AdminNotificationResponse {
+  success: boolean;
+  data: AdminNotification[];
   message: string;
 }
 
