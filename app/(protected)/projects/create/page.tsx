@@ -36,7 +36,7 @@ export default function CreateProjectPage() {
   const [showFastClientWidget, setShowFastClientWidget] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [clients, setClients] = useState<{ id: string; profileId: string; name: string }[]>([]);
 
   // Set automatic dates
   useEffect(() => {
@@ -57,7 +57,8 @@ export default function CreateProjectPage() {
     try {
       const clientProfiles = await apiClient.getClients();
       const formattedClients = clientProfiles.map((profile: any) => ({
-        id: profile.id,
+        id: profile.userId, // Use userId instead of profile.id
+        profileId: profile.id, // Keep profile id for reference if needed
         name: profile.companyName || profile.user?.name || 'Unnamed Client'
       }));
       setClients(formattedClients);
@@ -69,6 +70,7 @@ export default function CreateProjectPage() {
   const handleFastClientCreated = (client: { id: string; name: string }) => {
     // Refresh clients list to include the new fast client
     fetchClients();
+    // The fast client widget should return the userId, not the profile id
     setClientId(client.id);
     setShowFastClientWidget(false);
   };
@@ -261,7 +263,7 @@ export default function CreateProjectPage() {
                             <SelectValue placeholder="Select client" />
                           </SelectTrigger>
                           <SelectContent className="border-palero-blue1/20">
-                            {clients.map((client: { id: string; name: string }) => (
+                            {clients.map((client: { id: string; profileId: string; name: string }) => (
                               <SelectItem 
                                 key={client.id} 
                                 value={client.id}
