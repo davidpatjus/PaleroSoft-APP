@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { 
@@ -13,14 +14,20 @@ import {
   MessageSquare, 
   DollarSign,
   AlertCircle,
-  Clock
+  Clock,
+  User,
+  Shield,
+  Users,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-import { Notification, NotificationType, EntityType } from '@/lib/api';
+import { AdminNotification, NotificationType, EntityType } from '@/lib/api';
 import { truncateText } from '@/utils/helpers';
 
-interface NotificationItemProps {
-  notification: Notification;
-  onClose: () => void;
+interface AdminNotificationItemProps {
+  notification: AdminNotification;
+  onMarkAsRead?: (notificationId: string) => Promise<void>;
+  currentUserId?: string;
 }
 
 // Icon mapping for notification types
@@ -45,32 +52,62 @@ const getNotificationIcon = (type: NotificationType) => {
   }
 };
 
-// Background color for notification types
-const getNotificationBg = (type: NotificationType, isRead: boolean) => {
-  if (isRead) return 'bg-gray-50/50';
-  
-  switch (type) {
-    case 'NEW_TASK_ASSIGNED':
-      return 'bg-palero-teal1/5 border-l-4 border-palero-teal1';
-    case 'TASK_STATUS_UPDATED':
-      return 'bg-palero-blue1/5 border-l-4 border-palero-blue1';
-    case 'PROJECT_CREATED':
-    case 'PROJECT_STATUS_UPDATED':
-      return 'bg-palero-green1/5 border-l-4 border-palero-green1';
-    case 'COMMENT_CREATED':
-      return 'bg-palero-teal2/5 border-l-4 border-palero-teal2';
-    case 'INVOICE_GENERATED':
-    case 'PAYMENT_REMINDER':
-      return 'bg-palero-green1/5 border-l-4 border-palero-green1';
+// Role icon mapping
+const getRoleIcon = (role: string) => {
+  switch (role) {
+    case 'ADMIN':
+      return <Shield className="h-3 w-3 text-palero-navy1" />;
+    case 'TEAM_MEMBER':
+      return <User className="h-3 w-3 text-palero-blue1" />;
+    case 'CLIENT':
+      return <Users className="h-3 w-3 text-palero-green1" />;
+    case 'FAST_CLIENT':
+      return <Users className="h-3 w-3 text-palero-teal1" />;
     default:
-      return 'bg-palero-blue1/5 border-l-4 border-palero-blue1';
+      return <User className="h-3 w-3 text-palero-navy2" />;
   }
 };
 
-export function NotificationItem({ notification, onClose }: NotificationItemProps) {
-  const { markAsRead } = useAuth();
-  const router = useRouter();
+// Background color for notification types (admin view)
+const getAdminNotificationBg = (type: NotificationType, isRead: boolean) => {
+  const baseOpacity = isRead ? '3' : '8';
+  
+  switch (type) {
+    case 'NEW_TASK_ASSIGNED':
+      return `bg-palero-teal1/${baseOpacity} border-l-2 border-palero-teal1/30`;
+    case 'TASK_STATUS_UPDATED':
+      return `bg-palero-blue1/${baseOpacity} border-l-2 border-palero-blue1/30`;
+    case 'PROJECT_CREATED':
+    case 'PROJECT_STATUS_UPDATED':
+      return `bg-palero-green1/${baseOpacity} border-l-2 border-palero-green1/30`;
+    case 'COMMENT_CREATED':
+      return `bg-palero-teal2/${baseOpacity} border-l-2 border-palero-teal2/30`;
+    case 'INVOICE_GENERATED':
+    case 'PAYMENT_REMINDER':
+      return `bg-palero-green1/${baseOpacity} border-l-2 border-palero-green1/30`;
+    default:
+      return `bg-palero-blue1/${baseOpacity} border-l-2 border-palero-blue1/30`;
+  }
+};
 
+// Get user initials for avatar
+const getUserInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+};
+
+export function AdminNotificationItem({ 
+  notification, 
+  onMarkAsRead, 
+  currentUserId 
+}: AdminNotificationItemProps) {
+  const router = useRouter();
+  const isOwnNotification = currentUserId === notification.userId;
+  
   // Function to get navigation URL based on entity type and notification type
   const getNavigationUrl = (entityType: EntityType, entityId: string, notificationType: NotificationType): string | null => {
     switch (entityType) {
@@ -84,8 +121,6 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
       case 'INVOICE':
         return `/invoices/${entityId}`;
       case 'COMMENT':
-        // For comments, we might want to navigate to the parent entity
-        // This would require additional logic to determine the parent
         return null;
       default:
         return null;
@@ -93,24 +128,19 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
   };
 
   const handleClick = async () => {
-    console.log('Notification clicked:', notification.id, 'Type:', notification.type, 'Entity:', notification.entityType);
     try {
-      if (!notification.isRead) {
-        await markAsRead(notification.id);
+      // Only mark as read if it's the admin's own notification
+      if (!notification.isRead && isOwnNotification && onMarkAsRead) {
+        await onMarkAsRead(notification.id);
       }
       
       // Navigate to related entity
       const navigationUrl = getNavigationUrl(notification.entityType, notification.entityId, notification.type);
-      console.log('Navigation URL:', navigationUrl);
       if (navigationUrl) {
         router.push(navigationUrl);
       }
-      
-      onClose();
     } catch (error) {
-      console.error('Error handling notification click:', error);
-      // Still close the dropdown even if there's an error
-      onClose();
+      console.error('Error handling admin notification click:', error);
     }
   };
 
@@ -118,10 +148,10 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
   const navigationUrl = getNavigationUrl(notification.entityType, notification.entityId, notification.type);
   const isClickable = navigationUrl !== null;
 
-  const baseClasses = "w-full p-3 transition-all duration-200 rounded-lg";
-  const bgClasses = getNotificationBg(notification.type, notification.isRead);
+  const baseClasses = "w-full p-4 transition-all duration-200 rounded-lg";
+  const bgClasses = getAdminNotificationBg(notification.type, notification.isRead);
   const interactionClasses = isClickable 
-    ? "hover:bg-palero-blue1/10 cursor-pointer" 
+    ? "hover:bg-palero-blue1/15 cursor-pointer" 
     : "cursor-default";
   const className = `${baseClasses} ${bgClasses} ${interactionClasses}`;
 
@@ -140,15 +170,38 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
     >
       <div className="flex items-start space-x-3 w-full">
         {/* Icon */}
-        <div className="flex-shrink-0 mt-0.5">
+        <div className="flex-shrink-0 mt-1">
           {getNotificationIcon(notification.type)}
+        </div>
+
+        {/* User Avatar & Info */}
+        <div className="flex-shrink-0">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="text-xs bg-palero-navy1/10 text-palero-navy1">
+              {notification.user ? getUserInitials(notification.user.name) : 'U'}
+            </AvatarFallback>
+          </Avatar>
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0 text-left">
+          {/* User info header */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm font-medium text-palero-navy1">
+              {notification.user?.name || 'Unknown User'}
+            </span>
+            <div className="flex items-center gap-1">
+              {getRoleIcon(notification.user?.role || '')}
+              <span className="text-xs text-palero-navy2/70 uppercase tracking-wide">
+                {notification.user?.role || 'N/A'}
+              </span>
+            </div>
+          </div>
+
+          {/* Notification message */}
           {notification.type === 'COMMENT_CREATED' && notification.content ? (
             <div className={`text-sm ${notification.isRead ? 'text-palero-navy2' : 'text-palero-navy1'}`}>
-              <p className={notification.isRead ? '' : 'font-medium'}>
+              <p className="leading-relaxed">
                 {notification.message}
               </p>
               <blockquote className="mt-2 pl-3 py-2 border-l-4 border-palero-teal2/50 bg-palero-teal2/10 rounded-r-md">
@@ -162,17 +215,31 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
             </div>
           ) : (
             <p className={`text-sm leading-relaxed ${
-              notification.isRead ? 'text-palero-navy2' : 'text-palero-navy1 font-medium'
+              notification.isRead ? 'text-palero-navy2' : 'text-palero-navy1'
             }`}>
               {notification.message}
             </p>
           )}
           
-          {/* Time and status */}
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-palero-navy2/70">
-              {timeAgo}
-            </span>
+          {/* Time, status and actions */}
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-palero-navy2/70">
+                {timeAgo}
+              </span>
+              
+              {/* Read status */}
+              <div className="flex items-center gap-1">
+                {notification.isRead ? (
+                  <Eye className="h-3 w-3 text-palero-green1" />
+                ) : (
+                  <EyeOff className="h-3 w-3 text-palero-navy2/50" />
+                )}
+                <span className="text-xs text-palero-navy2/70">
+                  {notification.isRead ? 'Read' : 'Unread'}
+                </span>
+              </div>
+            </div>
             
             <div className="flex items-center gap-2">
               {!notification.isRead && (
@@ -184,9 +251,19 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
                 </Badge>
               )}
               
+              {/* Show if admin can interact with this notification */}
+              {isOwnNotification && !notification.isRead && (
+                <Badge 
+                  variant="outline" 
+                  className="h-5 px-2 py-5 md:py-4 text-xs border-palero-navy1/30 text-palero-navy1"
+                >
+                  Your notification
+                </Badge>
+              )}
+              
               {isClickable && (
                 <span className="text-xs text-palero-teal1 font-medium">
-                  Click to view →
+                  View →
                 </span>
               )}
             </div>

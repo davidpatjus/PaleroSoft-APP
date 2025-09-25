@@ -152,6 +152,7 @@ export interface Notification {
   userId: string;
   type: NotificationType;
   message: string;
+  content?: string | null;
   entityType: EntityType;
   entityId: string;
   isRead: boolean;

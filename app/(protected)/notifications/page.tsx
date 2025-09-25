@@ -39,7 +39,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 max-w-4xl">
+    <div className="container mx-auto p-4 md:p-6 max-w-4xl overflow-x-hidden">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
@@ -93,13 +93,13 @@ export default function NotificationsPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-palero-navy2" />
+          <div className="flex items-center gap-2 min-w-0">
+            <Filter className="h-4 w-4 text-palero-navy2 flex-shrink-0" />
             <Select value={filter} onValueChange={(value: 'all' | 'unread' | 'read') => setFilter(value)}>
               <SelectTrigger className="w-32 border-palero-blue1/30 focus:border-palero-teal1">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent align="end" side="bottom" className="max-w-[140px]">
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="unread">Unread</SelectItem>
                 <SelectItem value="read">Read</SelectItem>
