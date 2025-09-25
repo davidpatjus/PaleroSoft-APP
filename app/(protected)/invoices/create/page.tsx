@@ -6,6 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/utils/permissions';
 import { apiClient, UserResponse, Project } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,17 @@ const CreateInvoicePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showFastClientWidget, setShowFastClientWidget] = useState(false);
+
+  // Check permissions
+  const canCreate = hasPermission(user?.role!, 'invoices', 'create');
+
+  // Redirect if user doesn't have permission to create invoices
+  useEffect(() => {
+    if (user && !canCreate) {
+      router.push('/invoices');
+      return;
+    }
+  }, [user, canCreate, router]);
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),

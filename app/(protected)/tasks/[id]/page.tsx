@@ -13,7 +13,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
 
 import {
   ArrowLeft,
@@ -322,10 +321,12 @@ export default function TaskDetailPage() {
                   <span className="text-sm font-medium text-palero-navy1">Task Status</span>
                   <span className="text-sm font-bold text-palero-green2">{progressValue}%</span>
                 </div>
-                <Progress 
-                  value={progressValue} 
-                  className="h-3 bg-palero-green1/10"
-                />
+                <div className="w-full bg-palero-green1/10 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-palero-green1 to-palero-teal1 h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${progressValue}%` }}
+                  ></div>
+                </div>
                 <p className="text-xs text-palero-navy2 text-center">
                   {task.status === 'DONE' ? 'Task completed' : `Task is ${task.status.toLowerCase().replace('_', ' ')}`}
                 </p>

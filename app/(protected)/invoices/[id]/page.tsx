@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient, Invoice } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/utils/permissions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -32,12 +33,23 @@ const InvoiceDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Check permissions
+  const canUpdate = hasPermission(user?.role!, 'invoices', 'update');
+  const canDelete = hasPermission(user?.role!, 'invoices', 'delete');
+
   useEffect(() => {
     const fetchInvoice = async () => {
       if (!user || !id) return;
       try {
         setLoading(true);
         const data = await apiClient.getInvoiceById(id);
+        
+        // Check if user has access to this invoice
+        if ((user.role === 'CLIENT' || user.role === 'FAST_CLIENT') && data.clientId !== user.id) {
+          setError('You do not have permission to view this invoice.');
+          return;
+        }
+        
         setInvoice(data);
       } catch (err) {
         setError('Failed to load invoice details.');
@@ -51,7 +63,7 @@ const InvoiceDetailsPage = () => {
   }, [user, id]);
 
   const handleDelete = async () => {
-    if (!id) return;
+    if (!id || !canDelete) return;
     try {
       await apiClient.deleteInvoice(id);
       toast({
@@ -109,28 +121,32 @@ const InvoiceDetailsPage = () => {
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Invoices
             </Button>
             <div className="flex space-x-2">
-                <Button onClick={() => router.push(`/invoices/${id}/edit`)}>
-                    <Edit className="mr-2 h-4 w-4" /> Edit
-                </Button>
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Void
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently void the invoice.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                {canUpdate && (
+                  <Button onClick={() => router.push(`/invoices/${id}/edit`)}>
+                      <Edit className="mr-2 h-4 w-4" /> Edit
+                  </Button>
+                )}
+                {canDelete && (
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive">
+                              <Trash2 className="mr-2 h-4 w-4" /> Void
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              This action cannot be undone. This will permanently void the invoice.
+                          </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+                )}
             </div>
         </div>
 

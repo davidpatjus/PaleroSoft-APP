@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient, Invoice } from '@/lib/api';
+import { hasPermission } from '@/utils/permissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -42,12 +43,29 @@ const InvoicesPage = () => {
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'due-soon' | 'overdue' | 'archived'>('all');
 
+  // Check permissions
+  const canCreate = hasPermission(user?.role!, 'invoices', 'create');
+  const canUpdate = hasPermission(user?.role!, 'invoices', 'update');
+  const canDelete = hasPermission(user?.role!, 'invoices', 'delete');
+
+  // Filter invoices based on user role
+  const getUserInvoices = useCallback((allInvoices: Invoice[]) => {
+    if (user?.role === 'CLIENT' || user?.role === 'FAST_CLIENT') {
+      // Clients can only see their own invoices
+      return allInvoices.filter(invoice => invoice.clientId === user.id);
+    }
+    // ADMIN and TEAM_MEMBER can see all invoices
+    return allInvoices;
+  }, [user?.role, user?.id]);
+
   useEffect(() => {
     const fetchInvoices = async () => {
       if (!user) return;
       try {
         const data = await apiClient.getInvoices();
-        setInvoices(data);
+        // Filter invoices based on user role
+        const filteredData = getUserInvoices(data);
+        setInvoices(filteredData);
       } catch (err) {
         setError('Failed to fetch invoices.');
         console.error(err);
@@ -57,10 +75,10 @@ const InvoicesPage = () => {
     };
 
     fetchInvoices();
-  }, [user]);
+  }, [user, getUserInvoices]);
 
   const handleDeleteInvoice = async () => {
-    if (!invoiceToDelete) return;
+    if (!invoiceToDelete || !canDelete) return;
     try {
       await apiClient.deleteInvoice(invoiceToDelete);
       // Optimistically update the UI, or refetch
@@ -200,14 +218,16 @@ const InvoicesPage = () => {
             </div>
           </div>
         </div>
-        <div className="flex-shrink-0">
-          <Link href="/invoices/create">
-            <Button className="bg-palero-green1 hover:bg-palero-green2 text-white w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create Invoice
-            </Button>
-          </Link>
-        </div>
+        {canCreate && (
+          <div className="flex-shrink-0">
+            <Link href="/invoices/create">
+              <Button className="bg-palero-green1 hover:bg-palero-green2 text-white w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Invoice
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Filter Buttons */}
@@ -332,8 +352,12 @@ const InvoicesPage = () => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}`)}>View Details</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}/edit`)}>Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setInvoiceToDelete(invoice.id)} className="text-red-600">Delete</DropdownMenuItem>
+                      {canUpdate && (
+                        <DropdownMenuItem onClick={() => router.push(`/invoices/${invoice.id}/edit`)}>Edit</DropdownMenuItem>
+                      )}
+                      {canDelete && (
+                        <DropdownMenuItem onClick={() => setInvoiceToDelete(invoice.id)} className="text-red-600">Delete</DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

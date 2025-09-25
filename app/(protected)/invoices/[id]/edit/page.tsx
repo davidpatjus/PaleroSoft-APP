@@ -6,6 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/utils/permissions';
 import { apiClient, Invoice, UserResponse, Project } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,17 @@ const EditInvoicePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check permissions
+  const canUpdate = hasPermission(user?.role!, 'invoices', 'update');
+
+  // Redirect if user doesn't have permission to update invoices
+  useEffect(() => {
+    if (user && !canUpdate) {
+      router.push('/invoices');
+      return;
+    }
+  }, [user, canUpdate, router]);
+
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
@@ -74,6 +86,12 @@ const EditInvoicePage = () => {
           apiClient.getProjects(),
         ]);
 
+        // Check if user has access to this invoice
+        if ((user.role === 'CLIENT' || user.role === 'FAST_CLIENT') && invoiceData.clientId !== user.id) {
+          setError('You do not have permission to edit this invoice.');
+          return;
+        }
+        
         setInvoice(invoiceData);
         
         // Filtrar solo usuarios con rol CLIENT
