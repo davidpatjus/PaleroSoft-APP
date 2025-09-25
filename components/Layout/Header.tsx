@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { NotificationBell } from '@/components/NotificationBell';
 
 export function Header() {
   const { user } = useAuth();
