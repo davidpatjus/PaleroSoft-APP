@@ -311,9 +311,13 @@ class ApiClient {
     fullName: string;
     role?: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
   }): Promise<UserResponse> {
+    const { fullName, ...rest } = userData;
     return this.request<UserResponse>('/users', {
       method: 'POST',
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        ...rest,
+        name: fullName, // Transform fullName to name for the API
+      }),
     });
   }
 
