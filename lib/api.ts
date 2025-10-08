@@ -335,9 +335,17 @@ class ApiClient {
     email?: string;
     password?: string;
   }): Promise<UserResponse> {
+    const { fullName, ...rest } = userData;
+    const payload: any = { ...rest };
+    
+    // Transform fullName to name if provided
+    if (fullName !== undefined) {
+      payload.name = fullName;
+    }
+    
     return this.request<UserResponse>(`/users/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(userData),
+      body: JSON.stringify(payload),
     });
   }
 

@@ -71,7 +71,8 @@ export function canAccessRoute(userRole: UserRole, route: string): boolean {
     '/meetings': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
     '/reports': ['ADMIN', 'TEAM_MEMBER'],
     '/notifications': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
-    '/settings': ['ADMIN']
+    '/settings': ['ADMIN'],
+    '/user-profile': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'] // Todos pueden acceder a su perfil
   };
 
   return routePermissions[route as keyof typeof routePermissions]?.includes(userRole) || false;

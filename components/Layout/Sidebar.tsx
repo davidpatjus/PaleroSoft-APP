@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfileImage } from '@/contexts/ProfileImageContext';
 import { canAccessRoute } from '@/utils/permissions';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import {
   LayoutDashboard,
@@ -23,7 +25,8 @@ import {
   X,
   FolderOpen,
   FileText,
-  Bell
+  Bell,
+  User
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -62,11 +65,13 @@ const navigationItems = [
   { name: 'Calendar', href: '/calendar', icon: Calendar, route: '/calendar' },
   { name: 'Meetings', href: '/meetings', icon: Video, route: '/meetings' },
   { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
+  { name: 'User Profile', href: '/user-profile', icon: User, route: '/user-profile' },
   // { name: 'Settings', href: '/settings', icon: Settings, route: '/settings' }
 ];
 
 export function Sidebar() {
   const { user, logout } = useAuth();
+  const { profileImage, isLoading: isLoadingImage } = useProfileImage();
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -99,11 +104,18 @@ export function Sidebar() {
       <div className="flex-1 py-6">
         <div className="px-6 mb-6">
           <div className="flex items-center space-x-3 p-3 rounded-lg bg-palero-navy1/50">
-            <Avatar className="ring-2 ring-palero-green1/50">
-              <AvatarFallback className="bg-palero-teal1 text-white font-semibold">
-                {user.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
+            {isLoadingImage ? (
+              <Skeleton className="h-10 w-10 rounded-full" />
+            ) : (
+              <Avatar className="ring-2 ring-palero-green1/50">
+                {profileImage ? (
+                  <AvatarImage src={profileImage} alt={user.name} />
+                ) : null}
+                <AvatarFallback className="bg-palero-teal1 text-white font-semibold">
+                  {user.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate text-white">{user.name}</p>
               <p className="text-xs text-palero-blue1">{getRoleDisplayName(user.role)}</p>

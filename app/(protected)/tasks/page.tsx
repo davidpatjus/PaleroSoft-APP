@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Calendar, CheckSquare, Clock, AlertCircle, Loader2, Kanban, List, Target, BarChart3, GripVertical, Eye, Edit, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { dragAndDrop } from '@formkit/drag-and-drop';
 import Link from 'next/link';
 
 export default function TasksPage() {
