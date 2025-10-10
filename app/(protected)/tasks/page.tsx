@@ -22,12 +22,6 @@ export default function TasksPage() {
   const [error, setError] = useState('');
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  
-  // Refs for drag and drop columns
-  const todoRef = useRef<HTMLDivElement>(null);
-  const inProgressRef = useRef<HTMLDivElement>(null);
-  const reviewRef = useRef<HTMLDivElement>(null);
-  const doneRef = useRef<HTMLDivElement>(null);
 
   const canCreate = hasPermission(user!.role, 'tasks', 'create');
   const canUpdate = hasPermission(user!.role, 'tasks', 'update');

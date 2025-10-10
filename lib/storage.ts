@@ -31,7 +31,7 @@ function authHeaders(): HeadersInit {
 function getBucketAndFolder(entityType: StorageEntityType): { bucket: string; folder: string } {
   switch (entityType) {
     case 'PROJECT':
-      return { bucket: 'images', folder: 'projects' };
+      return { bucket: 'files', folder: 'projects' };
     case 'TASK':
       return { bucket: 'files', folder: 'tasks' };
     case 'CLIENT_DOCUMENT':
@@ -163,8 +163,25 @@ export function toPublicImageUrlEndpoint(filePath: string): string {
 }
 
 export async function getSignedDownloadUrl(filePath: string, expiresIn = 300): Promise<string> {
-  // Construir URL correctamente
-  const url = `${STORAGE_BASE}/storage/download?bucket=files&filePath=${encodeURIComponent(filePath)}&expiresIn=${expiresIn}`;
+  // Validar que expiresIn esté en el rango permitido (60-86400 segundos)
+  const validExpiresIn = Math.max(60, Math.min(86400, expiresIn));
+  
+  // Construir URL con query parameters
+  // Nota: El backend espera expiresIn como número, pero los query params siempre son strings
+  // Si el backend no tiene @Type() en el DTO, esto fallará
+  const params = new URLSearchParams({
+    bucket: 'files',
+    filePath: filePath,
+    expiresIn: validExpiresIn.toString(),
+  });
+  
+  const url = `${STORAGE_BASE}/storage/download?${params.toString()}`;
+
+  console.log('📥 Solicitando URL firmada:', {
+    filePath,
+    expiresIn: validExpiresIn,
+    url,
+  });
 
   const res = await fetch(url, {
     headers: {
@@ -172,12 +189,23 @@ export async function getSignedDownloadUrl(filePath: string, expiresIn = 300): P
     },
     cache: 'no-store',
   });
+  
   if (!res.ok) {
     let body: any = undefined;
     try { body = await res.json(); } catch {}
-    throw new Error(body?.message || 'No se pudo generar la URL');
+    const errorMessage = body?.message || 'No se pudo generar la URL';
+    console.error('❌ Error en getSignedDownloadUrl:', {
+      status: res.status,
+      statusText: res.statusText,
+      errorMessage,
+      body,
+      sentExpiresIn: validExpiresIn,
+      sentType: typeof validExpiresIn,
+    });
+    throw new Error(errorMessage);
   }
   const data = await res.json();
+  console.log('✅ URL firmada obtenida correctamente');
   return data.signedUrl as string;
 }
 
