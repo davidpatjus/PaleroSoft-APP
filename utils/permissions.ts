@@ -20,6 +20,7 @@ export const rolePermissions: RolePermissions = {
     { resource: 'invoices', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'notifications', actions: ['read'] },
     { resource: 'reports', actions: ['read'] },
+    { resource: 'chat', actions: ['create', 'read', 'update'] },
     { resource: 'settings', actions: ['read', 'update'] }
   ],
   TEAM_MEMBER: [
@@ -31,6 +32,7 @@ export const rolePermissions: RolePermissions = {
     { resource: 'comments', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'invoices', actions: ['create', 'read', 'update'] },
     { resource: 'notifications', actions: ['read'] },
+    { resource: 'chat', actions: ['create', 'read', 'update'] },
     { resource: 'reports', actions: ['read'] }
   ],
   CLIENT: [
@@ -39,13 +41,15 @@ export const rolePermissions: RolePermissions = {
     { resource: 'subtasks', actions: ['read'] },
     { resource: 'comments', actions: ['create', 'read'] },
     { resource: 'invoices', actions: ['read'] },
-    { resource: 'notifications', actions: ['read'] }
+    { resource: 'notifications', actions: ['read'] },
+    { resource: 'chat', actions: ['create', 'read', 'update'] }
   ],
   FAST_CLIENT: [
     { resource: 'projects', actions: ['read'] },
     { resource: 'tasks', actions: ['read'] },
     { resource: 'invoices', actions: ['read'] },
     { resource: 'notifications', actions: ['read'] }
+    // chat: No incluido - los FAST_CLIENT no tienen acceso al chat
   ]
 };
 
@@ -71,6 +75,7 @@ export function canAccessRoute(userRole: UserRole, route: string): boolean {
     '/meetings': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
     '/reports': ['ADMIN', 'TEAM_MEMBER'],
     '/notifications': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'],
+    '/chat': ['ADMIN', 'TEAM_MEMBER', 'CLIENT'], // FAST_CLIENT excluido
     '/settings': ['ADMIN'],
     '/user-profile': ['ADMIN', 'TEAM_MEMBER', 'CLIENT', 'FAST_CLIENT'] // Todos pueden acceder a su perfil
   };

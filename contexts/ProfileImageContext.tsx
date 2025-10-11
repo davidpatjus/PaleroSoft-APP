@@ -34,7 +34,6 @@ export const ProfileImageProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const refreshProfileImage = useCallback(async (options?: { force?: boolean }) => {
     const force = options?.force === true;
     if (!user?.id) {
-      console.log('⚠️ [ProfileImageContext] No hay usuario para cargar imagen');
       setIsLoading(false);
       return;
     }
@@ -47,7 +46,6 @@ export const ProfileImageProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // 🔥 Evitar recargar si ya cargamos para este usuario
     if (!force && loadedUserIdRef.current === user.id && profileImage) {
-      console.log('✅ [ProfileImageContext] Imagen ya cargada para este usuario');
       return;
     }
 
@@ -56,18 +54,14 @@ export const ProfileImageProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setIsLoading(true);
       setError(null);
       
-      console.log('🔄 [ProfileImageContext] Cargando imagen para usuario:', user.id);
 
       const files = await listFiles('PROFILE_IMAGE', user.id);
-      console.log('📋 [ProfileImageContext] Archivos encontrados:', files.length);
 
       if (files.length > 0) {
         const file = files[0] as FileAttachment;
-        console.log('✅ [ProfileImageContext] Imagen encontrada:', file);
 
         setProfileImagePath(file.filePath);
 
-        console.log('🔗 [ProfileImageContext] Obteniendo URL pública...');
         const publicUrl = await toPublicImageUrl(file.filePath);
         // 🚀 Cache-busting para evitar que el navegador/CDN muestre la imagen anterior
         const bustedUrl = `${publicUrl}${publicUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;

@@ -9,7 +9,8 @@ import {
   jsonb,
   decimal,
   date,
-  primaryKey,
+  unique,
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -50,6 +51,7 @@ export const fileEntityTypeEnum = pgEnum('file_entity_type', [
   'PROJECT',
   'TASK',
   'CLIENT_DOCUMENT',
+  'PROFILE_IMAGE',
 ]);
 export const invoiceStatusEnum = pgEnum('invoice_status', [
   'DRAFT',
@@ -259,55 +261,78 @@ export const invoiceItemsTable = pgTable('invoice_items', {
     .$onUpdate(() => new Date()),
 });
 
-export const conversationsTable = pgTable('conversations', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  projectId: uuid('project_id').references(() => projectsTable.id, {
-    onDelete: 'set null',
-  }), // Can be null if conversation is not project-specific
-  name: varchar('name', { length: 255 }), // Optional name for group chats
-  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
-
-export const conversationParticipantsTable = pgTable(
-  'conversation_participants',
+export const conversationsTable = pgTable(
+  'conversations',
   {
-    conversationId: uuid('conversation_id')
-      .notNull()
-      .references(() => conversationsTable.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id')
+    id: uuid('id').defaultRandom().primaryKey(),
+    // Campos para los dos participantes (ordenados para evitar duplicados)
+    userOneId: uuid('user_one_id')
       .notNull()
       .references(() => usersTable.id, { onDelete: 'cascade' }),
-    joinedAt: timestamp('joined_at', { mode: 'date', withTimezone: true })
+    userTwoId: uuid('user_two_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'cascade' }),
+    // Metadatos del último mensaje para queries eficientes
+    lastMessageAt: timestamp('last_message_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    lastMessagePreview: varchar('last_message_preview', { length: 100 }),
+    // Timestamps estándar
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
       .defaultNow()
       .notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (table) => {
     return {
-      pk: primaryKey({ columns: [table.conversationId, table.userId] }),
+      // Constraint para evitar conversaciones duplicadas (A-B vs B-A)
+      uniqueConversation: unique().on(table.userOneId, table.userTwoId),
+      // Índices para optimizar consultas
+      userOneIdx: index().on(table.userOneId),
+      userTwoIdx: index().on(table.userTwoId),
+      lastMessageIdx: index().on(table.lastMessageAt),
     };
   },
 );
 
-export const messagesTable = pgTable('messages', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  conversationId: uuid('conversation_id')
-    .notNull()
-    .references(() => conversationsTable.id, { onDelete: 'cascade' }),
-  senderId: uuid('sender_id')
-    .notNull()
-    .references(() => usersTable.id, { onDelete: 'cascade' }),
-  content: text('content').notNull(),
-  timestamp: timestamp('timestamp', { mode: 'date', withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  isRead: boolean('is_read').default(false).notNull(),
-});
+// conversationParticipantsTable eliminada - ya no necesaria para chats 1 a 1
+// Los participantes ahora están directamente en conversationsTable (userOneId, userTwoId)
+
+export const messagesTable = pgTable(
+  'messages',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversationsTable.id, { onDelete: 'cascade' }),
+    senderId: uuid('sender_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'cascade' }),
+    content: text('content').notNull(),
+    // Timestamp mejorado
+    sentAt: timestamp('sent_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    // Estado de lectura mejorado para 1 a 1
+    readAt: timestamp('read_at', { mode: 'date', withTimezone: true }),
+    // Flag de entrega (para futuras notificaciones push)
+    deliveredAt: timestamp('delivered_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+  },
+  (table) => {
+    return {
+      // Índices para optimizar consultas de chat
+      conversationIdx: index().on(table.conversationId, table.sentAt),
+      senderIdx: index().on(table.senderId),
+    };
+  },
+);
 
 export const notificationsTable = pgTable('notifications', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -366,7 +391,12 @@ export const usersRelations = relations(usersTable, ({ one, many }) => ({
   uploadedFiles: many(fileAttachmentsTable),
   invoicesAsClient: many(invoicesTable, { relationName: 'clientInvoices' }), // Invoices issued to this user as a client
   sentMessages: many(messagesTable, { relationName: 'sentMessages' }),
-  conversationParticipations: many(conversationParticipantsTable),
+  conversationsAsUserOne: many(conversationsTable, {
+    relationName: 'userOneConversations',
+  }),
+  conversationsAsUserTwo: many(conversationsTable, {
+    relationName: 'userTwoConversations',
+  }),
   notifications: many(notificationsTable),
   calendarEvents: many(calendarEventsTable),
 }));
@@ -390,7 +420,6 @@ export const projectsRelations = relations(projectsTable, ({ one, many }) => ({
   tasks: many(tasksTable),
   comments: many(commentsTable),
   invoices: many(invoicesTable),
-  conversations: many(conversationsTable),
   calendarEvents: many(calendarEventsTable),
 }));
 
@@ -470,28 +499,21 @@ export const invoiceItemsRelations = relations(
 export const conversationsRelations = relations(
   conversationsTable,
   ({ one, many }) => ({
-    project: one(projectsTable, {
-      fields: [conversationsTable.projectId],
-      references: [projectsTable.id],
+    userOne: one(usersTable, {
+      fields: [conversationsTable.userOneId],
+      references: [usersTable.id],
+      relationName: 'userOneConversations',
     }),
-    participants: many(conversationParticipantsTable),
+    userTwo: one(usersTable, {
+      fields: [conversationsTable.userTwoId],
+      references: [usersTable.id],
+      relationName: 'userTwoConversations',
+    }),
     messages: many(messagesTable),
   }),
 );
 
-export const conversationParticipantsRelations = relations(
-  conversationParticipantsTable,
-  ({ one }) => ({
-    conversation: one(conversationsTable, {
-      fields: [conversationParticipantsTable.conversationId],
-      references: [conversationsTable.id],
-    }),
-    user: one(usersTable, {
-      fields: [conversationParticipantsTable.userId],
-      references: [usersTable.id],
-    }),
-  }),
-);
+// conversationParticipantsRelations eliminada - tabla ya no existe para chats 1 a 1
 
 export const messagesRelations = relations(messagesTable, ({ one }) => ({
   conversation: one(conversationsTable, {

@@ -143,9 +143,10 @@ export type NotificationType =
   | 'PROJECT_STATUS_UPDATED'
   | 'COMMENT_CREATED'
   | 'INVOICE_GENERATED'
-  | 'PAYMENT_REMINDER';
+  | 'PAYMENT_REMINDER'
+  | 'NEW_MESSAGE';
 
-export type EntityType = 'TASK' | 'PROJECT' | 'INVOICE' | 'COMMENT';
+export type EntityType = 'TASK' | 'PROJECT' | 'INVOICE' | 'COMMENT' | 'CONVERSATION';
 
 export interface Notification {
   id: string;
@@ -185,6 +186,146 @@ export interface SingleNotificationResponse {
   success: boolean;
   data: Notification;
   message: string;
+}
+
+// =====================================================
+// CHAT MODULE - Interfaces and Types
+// =====================================================
+
+/**
+ * Conversación 1-a-1 entre dos usuarios
+ */
+export interface Conversation {
+  id: string;
+  userOneId: string;
+  userTwoId: string;
+  lastMessageAt: string;
+  lastMessagePreview: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Conversación con información del otro participante
+ * (usada en listados y vistas)
+ */
+export interface ConversationWithParticipant {
+  id: string;
+  otherUser: {
+    id: string;
+    name: string;
+    email: string;
+    role: 'ADMIN' | 'TEAM_MEMBER' | 'CLIENT' | 'FAST_CLIENT';
+  };
+  lastMessageAt: string;
+  lastMessagePreview: string | null;
+  unreadCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Mensaje dentro de una conversación
+ */
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  sentAt: string;
+  deliveredAt: string | null;
+  readAt: string | null;
+  // Campos opcionales para enriquecer en frontend
+  sender?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  isMine?: boolean;
+  isOptimistic?: boolean; // Flag para mensajes temporales
+}
+
+/**
+ * Respuesta paginada de mensajes con cursor
+ */
+export interface PaginatedMessages {
+  messages: Message[];
+  hasMore: boolean;
+}
+
+/**
+ * Request para crear una conversación
+ */
+export interface CreateConversationRequest {
+  recipientId: string;
+  initialMessage?: string;
+}
+
+/**
+ * Request para enviar un mensaje
+ */
+export interface SendMessageRequest {
+  conversationId: string;
+  content: string;
+}
+
+/**
+ * Response al enviar un mensaje
+ */
+export interface SendMessageResponse {
+  message: Message;
+  conversation: {
+    id: string;
+    lastMessageAt: string;
+    lastMessagePreview: string;
+  };
+}
+
+/**
+ * Request para marcar mensajes como leídos
+ */
+export interface MarkMessagesReadRequest {
+  conversationId: string;
+  messageIds?: string[];
+}
+
+/**
+ * Response al marcar mensajes como leídos
+ */
+export interface MarkMessagesReadResponse {
+  success: boolean;
+  count: number;
+}
+
+/**
+ * Token de Supabase para Realtime
+ */
+export interface SupabaseTokenResponse {
+  accessToken: string;
+  expiresAt: string;
+  userId: string;
+}
+
+/**
+ * Configuración completa de Supabase
+ */
+export interface SupabaseConfigResponse {
+  url: string;
+  anonKey: string;
+  realtime?: {
+    token: string;
+    expiresAt: string;
+  };
+}
+
+/**
+ * Health check response del módulo de chat
+ */
+export interface ChatHealthResponse {
+  status: 'ok' | 'error';
+  timestamp: string;
+  database?: string;
+  message?: string;
 }
 
 class ApiClient {
@@ -660,6 +801,108 @@ class ApiClient {
   async getAllNotificationsForAdmin(): Promise<Notification[]> {
     const response = await this.request<NotificationResponse>('/notifications/admin/all');
     return response.data;
+  }
+
+  // =====================================================
+  // CHAT MODULE - API Methods
+  // =====================================================
+
+  /**
+   * Health check del módulo de chat
+   */
+  async getChatHealth(): Promise<ChatHealthResponse> {
+    return this.request<ChatHealthResponse>('/chat/health');
+  }
+
+  /**
+   * Obtiene el token de Supabase para autenticación en Realtime
+   */
+  async getSupabaseToken(): Promise<SupabaseTokenResponse> {
+    return this.request<SupabaseTokenResponse>('/chat/supabase-token');
+  }
+
+  /**
+   * Obtiene la configuración completa de Supabase (URL, anon key, y token Realtime)
+   */
+  async getSupabaseConfig(): Promise<SupabaseConfigResponse> {
+    return this.request<SupabaseConfigResponse>('/chat/supabase-config');
+  }
+
+  /**
+   * Crea una nueva conversación 1-a-1 o retorna una existente
+   * @param data - recipientId y opcionalmente un mensaje inicial
+   */
+  async createConversation(data: CreateConversationRequest): Promise<Conversation> {
+    return this.request<Conversation>('/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Lista las conversaciones del usuario actual con paginación simple
+   * @param params - limit y offset opcionales
+   */
+  async listConversations(params?: { limit?: number; offset?: number }): Promise<ConversationWithParticipant[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+    if (params?.offset) queryParams.set('offset', params.offset.toString());
+    
+    const query = queryParams.toString();
+    const endpoint = query ? `/chat/conversations?${query}` : '/chat/conversations';
+    
+    return this.request<ConversationWithParticipant[]>(endpoint);
+  }
+
+  /**
+   * Obtiene una conversación por ID
+   * @param id - ID de la conversación
+   */
+  async getConversation(id: string): Promise<ConversationWithParticipant> {
+    return this.request<ConversationWithParticipant>(`/chat/conversations/${id}`);
+  }
+
+  /**
+   * Obtiene los mensajes de una conversación con paginación basada en cursor
+   * @param conversationId - ID de la conversación
+   * @param params - limit y cursor opcionales
+   */
+  async getMessages(
+    conversationId: string,
+    params?: { limit?: number; cursor?: string }
+  ): Promise<PaginatedMessages> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+    if (params?.cursor) queryParams.set('cursor', params.cursor);
+    
+    const query = queryParams.toString();
+    const endpoint = query 
+      ? `/chat/conversations/${conversationId}/messages?${query}`
+      : `/chat/conversations/${conversationId}/messages`;
+    
+    return this.request<PaginatedMessages>(endpoint);
+  }
+
+  /**
+   * Envía un mensaje en una conversación
+   * @param data - conversationId y content del mensaje
+   */
+  async sendMessage(data: SendMessageRequest): Promise<SendMessageResponse> {
+    return this.request<SendMessageResponse>('/chat/messages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Marca mensajes como leídos en una conversación
+   * @param data - conversationId y opcionalmente messageIds específicos
+   */
+  async markMessagesRead(data: MarkMessagesReadRequest): Promise<MarkMessagesReadResponse> {
+    return this.request<MarkMessagesReadResponse>('/chat/messages/mark-read', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   }
 }
 

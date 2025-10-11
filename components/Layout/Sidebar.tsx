@@ -26,7 +26,8 @@ import {
   FolderOpen,
   FileText,
   Bell,
-  User
+  User,
+  MessageCircle
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -63,6 +64,7 @@ const navigationItems = [
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, route: '/tasks' },
   { name: 'Invoices', href: '/invoices', icon: FileText, route: '/invoices' },
   { name: 'Calendar', href: '/calendar', icon: Calendar, route: '/calendar' },
+  { name: 'Chat', href: '/chat', icon: MessageCircle, route: '/chat' },
   { name: 'Meetings', href: '/meetings', icon: Video, route: '/meetings' },
   { name: 'Reports', href: '/reports', icon: BarChart3, route: '/reports' },
   { name: 'User Profile', href: '/user-profile', icon: User, route: '/user-profile' },

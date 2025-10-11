@@ -11,6 +11,15 @@ const nextConfig = {
       },
     ],
   },
+  webpack: (config) => {
+    config.ignoreWarnings = [
+      {
+        module: /@supabase/,
+        message: /Critical dependency/,
+      },
+    ];
+    return config;
+  },
 };
 
 module.exports = nextConfig;
