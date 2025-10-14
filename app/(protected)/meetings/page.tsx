@@ -1,215 +1,428 @@
 "use client";
 
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiClient, Meeting } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Video, Calendar, Users, Clock, Plus, Settings, Mic, MicOff, Camera, CameraOff } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { MeetingCard, CreateMeetingModal } from '@/components/meetings';
+import { Video, Plus, Search, Loader2, Calendar, Clock, CheckCircle2, XCircle, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function MeetingsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [meetingTypeToCreate, setMeetingTypeToCreate] = useState<'instant' | 'scheduled'>('scheduled');
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; meeting: Meeting | null }>({
+    open: false,
+    meeting: null,
+  });
+  const [instantMeetingDialog, setInstantMeetingDialog] = useState<{ open: boolean; meeting: Meeting | null }>({
+    open: false,
+    meeting: null,
+  });
+
+  useEffect(() => {
+    loadMeetings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadMeetings = async () => {
+    setLoading(true);
+    try {
+      console.log('🔄 Cargando meetings...');
+      const data = await apiClient.getMeetings();
+      console.log('✅ Meetings recibidas del backend:', data);
+      console.log('📊 Tipo de dato:', typeof data);
+      console.log('📏 Es array?:', Array.isArray(data));
+      
+      // Si el backend devuelve { data: [...] }, extraer el array
+      const meetingsArray = Array.isArray(data) ? data : (data as any)?.data || [];
+      console.log('📦 Meetings array procesado:', meetingsArray);
+      console.log('🔢 Total de meetings:', meetingsArray.length);
+      
+      setMeetings(meetingsArray);
+    } catch (error: any) {
+      console.error('❌ Error loading meetings:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar las reuniones',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewMeeting = (meeting: Meeting) => {
+    router.push(`/meetings/${meeting.id}`);
+  };
+
+  const handleEditMeeting = (meeting: Meeting) => {
+    // TODO: Implementar modal de edición
+    toast({
+      title: 'Funcionalidad en desarrollo',
+      description: 'La edición de reuniones estará disponible pronto',
+    });
+  };
+
+  const handleDeleteMeeting = async () => {
+    if (!deleteDialog.meeting) return;
+
+    try {
+      await apiClient.deleteMeeting(deleteDialog.meeting.id);
+      toast({
+        title: 'Reunión eliminada',
+        description: 'La reunión se ha eliminado exitosamente',
+      });
+      loadMeetings();
+    } catch (error: any) {
+      console.error('Error deleting meeting:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo eliminar la reunión',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteDialog({ open: false, meeting: null });
+    }
+  };
+
+  const handleJoinMeeting = (meeting: Meeting) => {
+    if (meeting.roomUrl) {
+      window.open(meeting.roomUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      toast({
+        title: 'Error',
+        description: 'La sala de reunión no está disponible',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleMeetingCreated = (meeting?: Meeting) => {
+    loadMeetings();
+    
+    // Si es una reunión instantánea, mostrar diálogo para unirse
+    if (meeting && meeting.status === 'SCHEDULED') {
+      const now = new Date();
+      const startTime = new Date(meeting.startTime);
+      const diffMinutes = Math.abs(startTime.getTime() - now.getTime()) / 60000;
+      
+      // Si empieza en menos de 5 minutos, considerarlo instantáneo
+      if (diffMinutes < 5) {
+        setInstantMeetingDialog({ open: true, meeting });
+      }
+    }
+  };
+
+  const handleJoinInstantMeeting = () => {
+    if (instantMeetingDialog.meeting) {
+      handleJoinMeeting(instantMeetingDialog.meeting);
+      setInstantMeetingDialog({ open: false, meeting: null });
+    }
+  };
+
+  const handleViewInstantMeeting = () => {
+    if (instantMeetingDialog.meeting) {
+      router.push(`/meetings/${instantMeetingDialog.meeting.id}`);
+      setInstantMeetingDialog({ open: false, meeting: null });
+    }
+  };
+
+  // Filtrar reuniones según búsqueda
+  const filteredMeetings = meetings.filter((meeting) =>
+    meeting.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    meeting.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Categorizar reuniones
+  const now = new Date();
+  
+  // Próximas: SCHEDULED y empieza en el futuro, O WAITING_ROOM
+  const upcoming = filteredMeetings.filter((m) => {
+    if (m.status === 'WAITING_ROOM') return true;
+    return m.status === 'SCHEDULED' && new Date(m.startTime) > now;
+  });
+  
+  // En Curso: IN_PROGRESS o SCHEDULED que ya empezó pero no terminó
+  const inProgress = filteredMeetings.filter((m) => {
+    if (m.status === 'IN_PROGRESS') return true;
+    if (m.status === 'SCHEDULED') {
+      const startTime = new Date(m.startTime);
+      const endTime = new Date(m.endTime);
+      return startTime <= now && endTime > now;
+    }
+    return false;
+  });
+  
+  // Completadas: COMPLETED o SCHEDULED/WAITING_ROOM que ya pasó su endTime
+  const completed = filteredMeetings.filter((m) => {
+    if (m.status === 'COMPLETED') return true;
+    if (m.status === 'SCHEDULED' || m.status === 'WAITING_ROOM') {
+      const endTime = new Date(m.endTime);
+      return endTime <= now;
+    }
+    return false;
+  });
+  
+  // Canceladas/Fallidas
+  const cancelled = filteredMeetings.filter(
+    (m) => m.status === 'CANCELLED' || m.status === 'DELETED' || m.status === 'FAILED'
+  );
+
+  const MeetingsGrid = ({ meetings }: { meetings: Meeting[] }) => {
+    if (meetings.length === 0) {
+      return (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Video className="h-12 w-12 text-palero-navy2 opacity-50 mb-4" />
+            <p className="text-palero-navy2 text-sm">No hay reuniones en esta categoría</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {meetings.map((meeting) => (
+          <MeetingCard
+            key={meeting.id}
+            meeting={meeting}
+            onView={handleViewMeeting}
+            onEdit={handleEditMeeting}
+            onDelete={(m) => setDeleteDialog({ open: true, meeting: m })}
+            onJoin={handleJoinMeeting}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold tracking-tight text-palero-navy1 break-words">
-            Meetings & Video Calls
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-palero-navy1 flex items-center gap-2">
+            <Video className="h-8 w-8 text-palero-blue1" />
+            Reuniones
           </h1>
-          <p className="text-xs sm:text-sm lg:text-base text-palero-navy2 mt-1 break-words">
-            Schedule and manage video conferences with your team and clients
+          <p className="text-sm text-palero-navy2 mt-1">
+            Gestiona tus videollamadas y reuniones virtuales
           </p>
         </div>
-        <div className="flex-shrink-0 w-full sm:w-auto">
-          <Button 
-            size="sm"
-            disabled
-            className="bg-palero-green1/50 text-white w-full sm:w-auto text-sm cursor-not-allowed opacity-50"
+        <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              setMeetingTypeToCreate('scheduled');
+              setCreateModalOpen(true);
+            }}
+            variant="outline"
+            className="border-palero-blue1 text-palero-blue1 hover:bg-palero-blue1 hover:text-white"
           >
-            <Plus className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            Schedule Meeting
+            <Calendar className="mr-2 h-4 w-4" />
+            Programar
+          </Button>
+          <Button
+            onClick={() => {
+              setMeetingTypeToCreate('instant');
+              setCreateModalOpen(true);
+            }}
+            className="bg-palero-green1 hover:bg-palero-green2"
+          >
+            <Zap className="mr-2 h-4 w-4" />
+            Reunión Rápida
           </Button>
         </div>
       </div>
 
-      {/* Development Notice */}
-      <Card className="border-palero-blue1/20 border-2 bg-white/80 backdrop-blur-sm shadow-lg">
-        <CardHeader className="text-center p-6 sm:p-8">
-          <div className="mx-auto mb-4 p-4 bg-palero-blue1/10 rounded-full w-fit">
-            <Video className="h-8 w-8 sm:h-12 sm:w-12 text-palero-blue1" />
-          </div>
-          <CardTitle className="text-xl sm:text-2xl lg:text-3xl text-palero-navy1 mb-2">
-            Module Under Development
-          </CardTitle>
-          <CardDescription className="text-sm sm:text-base text-palero-navy2 max-w-2xl mx-auto">
-            We&apos;re building an advanced video conferencing system that will allow you to schedule, manage, and conduct meetings directly within the CRM platform.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 sm:p-8">
-          <div className="space-y-6">
-            {/* Coming Soon Features */}
-            <div>
-              <h3 className="text-lg font-semibold text-palero-navy1 mb-4 text-center">
-                Coming Soon Features
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Feature 1 */}
-                <Card className="border-palero-green1/20 bg-palero-green1/5">
-                  <CardContent className="p-4 text-center">
-                    <Calendar className="h-6 w-6 text-palero-green1 mx-auto mb-2" />
-                    <h4 className="font-medium text-palero-navy1 mb-1">Meeting Scheduler</h4>
-                    <p className="text-xs text-palero-navy2">Schedule meetings with clients and team members</p>
-                  </CardContent>
-                </Card>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-blue-900">Próximas</CardTitle>
+            <Calendar className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-900">{upcoming.length}</div>
+          </CardContent>
+        </Card>
 
-                {/* Feature 2 */}
-                <Card className="border-palero-teal1/20 bg-palero-teal1/5">
-                  <CardContent className="p-4 text-center">
-                    <Video className="h-6 w-6 text-palero-teal1 mx-auto mb-2" />
-                    <h4 className="font-medium text-palero-navy1 mb-1">HD Video Calls</h4>
-                    <p className="text-xs text-palero-navy2">High-quality video conferences with screen sharing</p>
-                  </CardContent>
-                </Card>
+        <Card className="border-green-200 bg-green-50/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-green-900">En Curso</CardTitle>
+            <Clock className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900">{inProgress.length}</div>
+          </CardContent>
+        </Card>
 
-                {/* Feature 3 */}
-                <Card className="border-palero-blue1/20 bg-palero-blue1/5">
-                  <CardContent className="p-4 text-center">
-                    <Users className="h-6 w-6 text-palero-blue1 mx-auto mb-2" />
-                    <h4 className="font-medium text-palero-navy1 mb-1">Team Collaboration</h4>
-                    <p className="text-xs text-palero-navy2">Multi-participant meetings with role management</p>
-                  </CardContent>
-                </Card>
+        <Card className="border-gray-200 bg-gray-50/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-900">Completadas</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-gray-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">{completed.length}</div>
+          </CardContent>
+        </Card>
 
-                {/* Feature 4 */}
-                <Card className="border-palero-yellow1/20 bg-palero-yellow1/5">
-                  <CardContent className="p-4 text-center">
-                    <Clock className="h-6 w-6 text-palero-yellow1 mx-auto mb-2" />
-                    <h4 className="font-medium text-palero-navy1 mb-1">Meeting History</h4>
-                    <p className="text-xs text-palero-navy2">Access recordings and meeting notes</p>
-                  </CardContent>
-                </Card>
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-orange-900">Canceladas</CardTitle>
+            <XCircle className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-900">{cancelled.length}</div>
+          </CardContent>
+        </Card>
+      </div>
 
-                {/* Feature 5 */}
-                <Card className="border-palero-navy1/20 bg-palero-navy1/5">
-                  <CardContent className="p-4 text-center">
-                    <Settings className="h-6 w-6 text-palero-navy1 mx-auto mb-2" />
-                    <h4 className="font-medium text-palero-navy1 mb-1">Advanced Settings</h4>
-                    <p className="text-xs text-palero-navy2">Customizable meeting preferences and controls</p>
-                  </CardContent>
-                </Card>
-
-                {/* Feature 6 */}
-                <Card className="border-palero-green2/20 bg-palero-green2/5">
-                  <CardContent className="p-4 text-center">
-                    <Mic className="h-6 w-6 text-palero-green2 mx-auto mb-2" />
-                    <h4 className="font-medium text-palero-navy1 mb-1">Audio Controls</h4>
-                    <p className="text-xs text-palero-navy2">Professional audio management and noise cancellation</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Mock Interface Preview */}
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold text-palero-navy1 mb-4 text-center">
-                Interface Preview
-              </h3>
-              
-              <Card className="border-palero-blue1/20 bg-gradient-to-br from-palero-blue1/5 to-palero-green1/5">
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Upcoming Meetings */}
-                    <div>
-                      <h4 className="font-medium text-palero-navy1 mb-3 flex items-center">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Upcoming Meetings
-                      </h4>
-                      <div className="space-y-2">
-                        <div className="p-3 bg-white/60 rounded border border-palero-green1/20">
-                          <p className="text-sm font-medium text-palero-navy1">Project Review</p>
-                          <p className="text-xs text-palero-navy2">Today, 2:00 PM</p>
-                          <Badge variant="outline" className="text-xs mt-1">Scheduled</Badge>
-                        </div>
-                        <div className="p-3 bg-white/60 rounded border border-palero-yellow1/20">
-                          <p className="text-sm font-medium text-palero-navy1">Client Presentation</p>
-                          <p className="text-xs text-palero-navy2">Tomorrow, 10:00 AM</p>
-                          <Badge variant="outline" className="text-xs mt-1">Pending</Badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div>
-                      <h4 className="font-medium text-palero-navy1 mb-3 flex items-center">
-                        <Video className="mr-2 h-4 w-4" />
-                        Quick Actions
-                      </h4>
-                      <div className="space-y-2">
-                        <Button size="sm" variant="outline" disabled className="w-full justify-start">
-                          <Video className="mr-2 h-4 w-4" />
-                          Start Instant Meeting
-                        </Button>
-                        <Button size="sm" variant="outline" disabled className="w-full justify-start">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          Schedule Meeting
-                        </Button>
-                        <Button size="sm" variant="outline" disabled className="w-full justify-start">
-                          <Users className="mr-2 h-4 w-4" />
-                          Join Meeting
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Meeting Controls */}
-                    <div>
-                      <h4 className="font-medium text-palero-navy1 mb-3 flex items-center">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Meeting Controls
-                      </h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button size="sm" variant="outline" disabled className="flex flex-col items-center p-3">
-                          <Mic className="h-4 w-4 mb-1" />
-                          <span className="text-xs">Mic</span>
-                        </Button>
-                        <Button size="sm" variant="outline" disabled className="flex flex-col items-center p-3">
-                          <Camera className="h-4 w-4 mb-1" />
-                          <span className="text-xs">Camera</span>
-                        </Button>
-                        <Button size="sm" variant="outline" disabled className="flex flex-col items-center p-3">
-                          <MicOff className="h-4 w-4 mb-1" />
-                          <span className="text-xs">Mute</span>
-                        </Button>
-                        <Button size="sm" variant="outline" disabled className="flex flex-col items-center p-3">
-                          <CameraOff className="h-4 w-4 mb-1" />
-                          <span className="text-xs">Hide</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Development Timeline */}
-            <div className="mt-8 text-center">
-              <h3 className="text-lg font-semibold text-palero-navy1 mb-4">
-                Development Timeline
-              </h3>
-              <div className="bg-palero-blue1/10 rounded-lg p-6">
-                <p className="text-palero-navy1 font-medium mb-2">
-                  Expected Release: before migrate project to vps
-                </p>
-                <p className="text-sm text-palero-navy2">
-                  We&apos;re working hard to bring you a comprehensive meeting solution that integrates seamlessly with your CRM workflow. 
-                  Stay tuned for updates!
-                </p>
-              </div>
-            </div>
+      {/* Search Bar */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-palero-navy2" />
+            <Input
+              placeholder="Buscar reuniones..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
+
+      {/* Meetings Tabs */}
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-palero-blue1" />
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="upcoming" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="upcoming">
+              Próximas ({upcoming.length})
+            </TabsTrigger>
+            <TabsTrigger value="in-progress">
+              En Curso ({inProgress.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed">
+              Completadas ({completed.length})
+            </TabsTrigger>
+            <TabsTrigger value="cancelled">
+              Canceladas ({cancelled.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upcoming">
+            <MeetingsGrid meetings={upcoming} />
+          </TabsContent>
+
+          <TabsContent value="in-progress">
+            <MeetingsGrid meetings={inProgress} />
+          </TabsContent>
+
+          <TabsContent value="completed">
+            <MeetingsGrid meetings={completed} />
+          </TabsContent>
+
+          <TabsContent value="cancelled">
+            <MeetingsGrid meetings={cancelled} />
+          </TabsContent>
+        </Tabs>
+      )}
+
+      {/* Create Meeting Modal */}
+      <CreateMeetingModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={handleMeetingCreated}
+        initialType={meetingTypeToCreate}
+      />
+
+      {/* Instant Meeting Dialog */}
+      <AlertDialog open={instantMeetingDialog.open} onOpenChange={(open) => setInstantMeetingDialog({ ...instantMeetingDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-palero-green1" />
+              ¡Reunión lista para comenzar!
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tu reunión <strong>&quot;{instantMeetingDialog.meeting?.title}&quot;</strong> ha sido creada exitosamente. 
+              <br />
+              <br />
+              ¿Qué te gustaría hacer ahora?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleViewInstantMeeting}
+              className="w-full sm:w-auto"
+            >
+              Ver Detalles
+            </Button>
+            <Button
+              onClick={handleJoinInstantMeeting}
+              className="bg-palero-green1 hover:bg-palero-green2 w-full sm:w-auto"
+            >
+              <Video className="mr-2 h-4 w-4" />
+              Unirse Ahora
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar reunión?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. La reunión será eliminada y los participantes no podrán unirse.
+              {deleteDialog.meeting?.roomUrl && (
+                <span className="block mt-2 text-orange-600">
+                  La sala de Daily.co también será eliminada.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMeeting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

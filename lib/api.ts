@@ -189,6 +189,117 @@ export interface SingleNotificationResponse {
 }
 
 // =====================================================
+// MEETINGS MODULE - Interfaces and Types
+// =====================================================
+
+/**
+ * Estados de reunión
+ */
+export type MeetingStatus = 
+  | 'SCHEDULED'
+  | 'WAITING_ROOM'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'FAILED'
+  | 'DELETED';
+
+/**
+ * Roles de participante en una reunión
+ */
+export type ParticipantRole = 'HOST' | 'PARTICIPANT' | 'OBSERVER';
+
+/**
+ * Estados de participante
+ */
+export type ParticipantStatus = 'INVITED' | 'JOINED' | 'LEFT' | 'REJECTED';
+
+/**
+ * Reunión (Meeting)
+ */
+export interface Meeting {
+  id: string;
+  title: string;
+  description?: string | null;
+  startTime: string;
+  endTime: string;
+  status: MeetingStatus;
+  projectId?: string | null;
+  createdById: string;
+  roomUrl?: string | null;
+  dailyRoomName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Relaciones opcionales
+  project?: Project;
+  createdBy?: UserResponse;
+  participants?: MeetingParticipant[];
+}
+
+/**
+ * Participante de reunión
+ */
+export interface MeetingParticipant {
+  id: string;
+  meetingId: string;
+  userId: string;
+  role: ParticipantRole;
+  status: ParticipantStatus;
+  joinedAt?: string | null;
+  leftAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Relaciones opcionales
+  user?: UserResponse;
+  meeting?: Meeting;
+}
+
+/**
+ * DTO para crear una reunión
+ */
+export interface CreateMeetingDto {
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  projectId?: string;
+}
+
+/**
+ * DTO para actualizar una reunión
+ */
+export interface UpdateMeetingDto {
+  title?: string;
+  description?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: MeetingStatus;
+}
+
+/**
+ * DTO para agregar participantes
+ */
+export interface AddParticipantsDto {
+  userIds: string[];
+  role?: ParticipantRole;
+}
+
+/**
+ * DTO para actualizar un participante
+ */
+export interface UpdateParticipantDto {
+  role?: ParticipantRole;
+  status?: ParticipantStatus;
+}
+
+/**
+ * Respuesta al eliminar una reunión o participante
+ */
+export interface DeleteResponse {
+  message: string;
+}
+
+// =====================================================
 // CHAT MODULE - Interfaces and Types
 // =====================================================
 
@@ -708,6 +819,103 @@ class ApiClient {
 
   async deleteComment(id: string): Promise<void> {
     return this.request<void>(`/comments/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // =====================================================
+  // MEETINGS MODULE - API Methods
+  // =====================================================
+
+  // --- Meetings CRUD ---
+
+  /**
+   * Obtener todas las reuniones
+   */
+  async getMeetings(): Promise<Meeting[]> {
+    return this.request<Meeting[]>('/meetings');
+  }
+
+  /**
+   * Obtener una reunión específica por ID
+   */
+  async getMeetingById(id: string): Promise<Meeting> {
+    return this.request<Meeting>(`/meetings/${id}`);
+  }
+
+  /**
+   * Crear una nueva reunión
+   */
+  async createMeeting(meetingData: CreateMeetingDto): Promise<Meeting> {
+    return this.request<Meeting>('/meetings', {
+      method: 'POST',
+      body: JSON.stringify(meetingData),
+    });
+  }
+
+  /**
+   * Actualizar una reunión existente
+   */
+  async updateMeeting(id: string, meetingData: UpdateMeetingDto): Promise<Meeting> {
+    return this.request<Meeting>(`/meetings/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(meetingData),
+    });
+  }
+
+  /**
+   * Eliminar una reunión (soft delete)
+   */
+  async deleteMeeting(id: string): Promise<DeleteResponse> {
+    return this.request<DeleteResponse>(`/meetings/${id}`, { 
+      method: 'DELETE' 
+    });
+  }
+
+  // --- Participants Management ---
+
+  /**
+   * Obtener todos los participantes de una reunión
+   */
+  async getMeetingParticipants(meetingId: string): Promise<MeetingParticipant[]> {
+    return this.request<MeetingParticipant[]>(`/meetings/${meetingId}/participants`);
+  }
+
+  /**
+   * Agregar participantes a una reunión
+   */
+  async addMeetingParticipants(
+    meetingId: string,
+    participantsData: AddParticipantsDto
+  ): Promise<MeetingParticipant[]> {
+    return this.request<MeetingParticipant[]>(`/meetings/${meetingId}/participants`, {
+      method: 'POST',
+      body: JSON.stringify(participantsData),
+    });
+  }
+
+  /**
+   * Actualizar un participante de una reunión
+   */
+  async updateMeetingParticipant(
+    meetingId: string,
+    userId: string,
+    participantData: UpdateParticipantDto
+  ): Promise<MeetingParticipant> {
+    return this.request<MeetingParticipant>(`/meetings/${meetingId}/participants/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(participantData),
+    });
+  }
+
+  /**
+   * Remover un participante de una reunión
+   */
+  async removeMeetingParticipant(
+    meetingId: string,
+    userId: string
+  ): Promise<DeleteResponse> {
+    return this.request<DeleteResponse>(`/meetings/${meetingId}/participants/${userId}`, {
       method: 'DELETE',
     });
   }

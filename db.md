@@ -81,8 +81,79 @@ export const subtaskPriorityEnum = pgEnum('subtask_priority', [
   'MEDIUM',
   'HIGH',
 ]);
+export const meetingStatusEnum = pgEnum('meeting_status', [
+  'SCHEDULED',
+  'WAITING_ROOM',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+  'FAILED',
+  'DELETED',
+]);
+export const participantRoleEnum = pgEnum('participant_role', [
+  'HOST',
+  'PARTICIPANT',
+  'OBSERVER',
+]);
+export const participantStatusEnum = pgEnum('participant_status', [
+  'INVITED',
+  'JOINED',
+  'LEFT',
+  'REJECTED',
+]);
 
 // Tables
+
+export const meetingsTable = pgTable('meetings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  startTime: timestamp('start_time', {
+    mode: 'date',
+    withTimezone: true,
+  }).notNull(),
+  endTime: timestamp('end_time', {
+    mode: 'date',
+    withTimezone: true,
+  }).notNull(),
+  status: meetingStatusEnum('status').default('SCHEDULED').notNull(),
+  projectId: uuid('project_id').references(() => projectsTable.id, {
+    onDelete: 'set null',
+  }),
+  createdById: uuid('created_by_id')
+    .notNull()
+    .references(() => usersTable.id, { onDelete: 'cascade' }),
+  roomUrl: varchar('room_url', { length: 255 }), // URL de la sala de Daily.co
+  dailyRoomName: varchar('daily_room_name', { length: 255 }).unique(), // Nombre único de la sala en Daily.co
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const meetingParticipantsTable = pgTable('meeting_participants', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  meetingId: uuid('meeting_id')
+    .notNull()
+    .references(() => meetingsTable.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => usersTable.id, { onDelete: 'cascade' }),
+  role: participantRoleEnum('role').default('PARTICIPANT').notNull(),
+  status: participantStatusEnum('status').default('INVITED').notNull(),
+  joinedAt: timestamp('joined_at', { mode: 'date', withTimezone: true }),
+  leftAt: timestamp('left_at', { mode: 'date', withTimezone: true }),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
 
 export const usersTable = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -399,6 +470,8 @@ export const usersRelations = relations(usersTable, ({ one, many }) => ({
   }),
   notifications: many(notificationsTable),
   calendarEvents: many(calendarEventsTable),
+  createdMeetings: many(meetingsTable, { relationName: 'createdBy' }),
+  meetingParticipations: many(meetingParticipantsTable),
 }));
 
 export const clientProfilesRelations = relations(
@@ -421,6 +494,7 @@ export const projectsRelations = relations(projectsTable, ({ one, many }) => ({
   comments: many(commentsTable),
   invoices: many(invoicesTable),
   calendarEvents: many(calendarEventsTable),
+  meetings: many(meetingsTable),
 }));
 
 export const tasksRelations = relations(tasksTable, ({ one, many }) => ({
@@ -513,8 +587,6 @@ export const conversationsRelations = relations(
   }),
 );
 
-// conversationParticipantsRelations eliminada - tabla ya no existe para chats 1 a 1
-
 export const messagesRelations = relations(messagesTable, ({ one }) => ({
   conversation: one(conversationsTable, {
     fields: [messagesTable.conversationId],
@@ -547,6 +619,33 @@ export const calendarEventsRelations = relations(
     project: one(projectsTable, {
       fields: [calendarEventsTable.projectId],
       references: [projectsTable.id],
+    }),
+  }),
+);
+
+export const meetingsRelations = relations(meetingsTable, ({ one, many }) => ({
+  project: one(projectsTable, {
+    fields: [meetingsTable.projectId],
+    references: [projectsTable.id],
+  }),
+  createdBy: one(usersTable, {
+    fields: [meetingsTable.createdById],
+    references: [usersTable.id],
+    relationName: 'createdBy',
+  }),
+  participants: many(meetingParticipantsTable),
+}));
+
+export const meetingParticipantsRelations = relations(
+  meetingParticipantsTable,
+  ({ one }) => ({
+    meeting: one(meetingsTable, {
+      fields: [meetingParticipantsTable.meetingId],
+      references: [meetingsTable.id],
+    }),
+    user: one(usersTable, {
+      fields: [meetingParticipantsTable.userId],
+      references: [usersTable.id],
     }),
   }),
 );
