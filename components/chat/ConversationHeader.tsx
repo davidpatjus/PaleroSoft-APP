@@ -27,48 +27,35 @@ export function ConversationHeader({
   };
 
   return (
-    <div className="flex items-center gap-3 p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-white">
       {/* Botón volver (móvil) */}
       {showBackButton && (
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={onBack}
-          className="md:hidden"
+          className="md:hidden h-10 w-10 text-gray-600 hover:text-palero-teal1 hover:bg-gray-100"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-5 w-5" />
         </Button>
       )}
 
       {/* Avatar del usuario */}
       <Avatar className="h-10 w-10">
-        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-medium">
+        <AvatarFallback className="bg-palero-teal1 text-white font-semibold text-sm">
           {getInitials(otherUser.name)}
         </AvatarFallback>
       </Avatar>
 
       {/* Info del usuario */}
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-sm truncate">
+        <h3 className="font-semibold text-sm text-gray-900 truncate">
           {otherUser.name}
         </h3>
-        <p className="text-xs text-muted-foreground truncate">
+        <p className="text-xs text-gray-500 truncate">
           {otherUser.email}
         </p>
       </div>
-
-      {/* Acciones */}
-      {/* <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" className="hidden sm:flex">
-          <Phone className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm" className="hidden sm:flex">
-          <Video className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
-      </div> */}
     </div>
   );
 }

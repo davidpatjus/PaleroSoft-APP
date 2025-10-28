@@ -216,7 +216,7 @@ export default function ConversationPage() {
     <ChatLayout 
       sidebar={sidebar} 
       main={main}
-      showSidebar={true}
+      showSidebar={false}
     />
   );
 }

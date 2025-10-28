@@ -16,19 +16,24 @@ export function ChatLayout({
   className 
 }: ChatLayoutProps) {
   return (
-    <div className={cn("h-[calc(100vh-4rem)] flex", className)}>
-      {/* Sidebar - Lista de conversaciones */}
+    <div className={cn("h-[calc(100vh-4rem)] flex bg-gray-50", className)}>
+      {/* Sidebar - Oculto en mobile, visible en desktop */}
       <div className={cn(
-        "w-80 border-r border-border bg-muted/30 transition-all duration-300",
-        showSidebar ? "translate-x-0" : "-translate-x-full",
-        "md:translate-x-0 md:relative md:flex-shrink-0",
-        !showSidebar && "absolute inset-y-0 left-0 z-40 md:z-0"
+        "w-full md:w-80 lg:w-96 border-r border-gray-200 bg-white flex-shrink-0 transition-all",
+        // En mobile: mostrar sidebar o main según showSidebar
+        showSidebar ? "block" : "hidden",
+        // En desktop: siempre visible
+        "md:block"
       )}>
         {sidebar}
       </div>
 
-      {/* Main - Chat activo */}
-      <div className="flex-1 flex flex-col min-w-0 bg-background">
+      {/* Main - Oculto en mobile cuando sidebar está visible */}
+      <div className={cn(
+        "flex-1 flex flex-col min-w-0 bg-white",
+        // En mobile: ocultar cuando sidebar está visible
+        showSidebar ? "hidden md:flex" : "flex"
+      )}>
         {main}
       </div>
     </div>

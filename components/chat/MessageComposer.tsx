@@ -40,27 +40,25 @@ export function MessageComposer({ onSend, disabled }: MessageComposerProps) {
   };
 
   return (
-    <div className="border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
-      <div className="flex items-end gap-3 max-w-4xl mx-auto">
-        <div className="flex-1 relative">
-          <Input
-            ref={inputRef}
-            placeholder="Escribe un mensaje..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={disabled}
-            className="h-12 bg-muted/50 border border-border/50 rounded-full px-4 py-3 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
-          />
-        </div>
+    <div className="border-t border-gray-200 bg-white p-4">
+      <div className="flex items-center gap-3 max-w-3xl mx-auto">
+        <Input
+          ref={inputRef}
+          placeholder="Escribe un mensaje..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+          className="flex-1 h-11 rounded-full border-gray-300 focus:border-palero-teal1 focus:ring-palero-teal1"
+        />
         
         <Button
           onClick={handleSend}
           disabled={!message.trim() || disabled}
           size="icon"
-          className="h-12 w-12 shrink-0 rounded-full shadow-sm transition-all hover:scale-105 disabled:scale-100 disabled:opacity-50"
+          className="h-11 w-11 rounded-full bg-palero-teal1 hover:bg-palero-teal2 text-white shadow-sm disabled:opacity-50"
         >
-          <Send className="h-4 w-4" />
+          <Send className="h-5 w-5" />
         </Button>
       </div>
     </div>

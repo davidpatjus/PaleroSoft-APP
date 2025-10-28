@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCheck, Check, ChevronDown } from 'lucide-react';
@@ -7,6 +6,7 @@ import { Message } from '@/lib/api';
 import { EmptyState } from './EmptyState';
 import { formatTime, formatDateDivider, isSameDay, parseDate } from '@/utils/dateHelpers';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 
 interface MessageListProps {
   messages: Message[];
@@ -24,7 +24,7 @@ export function MessageList({
   otherUserName 
 }: MessageListProps) {
   const { user } = useAuth();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
 
@@ -102,8 +102,8 @@ export function MessageList({
 
   if (loading && messages.length === 0) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex justify-center items-center h-full bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-palero-teal1" />
       </div>
     );
   }
@@ -113,24 +113,27 @@ export function MessageList({
   }
 
   return (
-    <ScrollArea className="flex-1 px-4 md:px-6" ref={scrollAreaRef}>
-      <div className="py-4 space-y-1">
-        {/* Botón de cargar más - ahora arriba */}
+    <div 
+      ref={scrollContainerRef}
+      className="flex-1 overflow-y-auto px-4 md:px-6 bg-gray-50"
+    >
+      <div className="py-4 space-y-2 max-w-3xl mx-auto">
+        {/* Botón de cargar más */}
         {hasMore && (
-          <div className="flex justify-center py-4">
+          <div className="flex justify-center py-2">
             <Button
               variant="outline"
               size="sm"
               onClick={onLoadMore}
               disabled={loading}
-              className="gap-2"
+              className="gap-2 text-palero-teal1 border-palero-teal1/30 hover:bg-palero-teal1/10"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <ChevronDown className="h-4 w-4" />
               )}
-              Cargar mensajes anteriores
+              Cargar más mensajes
             </Button>
           </div>
         )}
@@ -151,8 +154,8 @@ export function MessageList({
             <React.Fragment key={msg.id}>
               {/* Divisor de fecha */}
               {showDateDivider && (
-                <div className="flex justify-center my-4">
-                  <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
+                <div className="flex justify-center my-6">
+                  <div className="bg-white px-4 py-1.5 rounded-full text-xs font-medium text-gray-600 shadow-sm border border-gray-200">
                     {formatDateDivider(msg.sentAt)}
                   </div>
                 </div>
@@ -166,7 +169,7 @@ export function MessageList({
               >
                 {!isCurrentUserMessage && showAvatar && (
                   <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback className="text-xs bg-gradient-to-br from-primary/60 to-primary/40 text-primary-foreground">
+                    <AvatarFallback className="text-xs bg-palero-teal1 text-white font-semibold">
                       {getInitials(otherUserName)}
                     </AvatarFallback>
                   </Avatar>
@@ -175,15 +178,15 @@ export function MessageList({
                 <div
                   className={`flex flex-col ${
                     isCurrentUserMessage ? 'items-end' : 'items-start'
-                  } max-w-[70%]`}
+                  } max-w-[80%] sm:max-w-[70%]`}
                 >
                   <div
-                    className={`px-4 py-2 rounded-2xl transition-opacity ${
+                    className={`px-4 py-2.5 rounded-2xl ${
                       isCurrentUserMessage
-                        ? `bg-primary text-primary-foreground rounded-br-sm ${
-                            msg.isOptimistic ? 'opacity-70' : ''
+                        ? `bg-palero-teal1 text-white rounded-br-md ${
+                            msg.isOptimistic ? 'opacity-60' : ''
                           }`
-                        : 'bg-muted text-foreground rounded-bl-sm'
+                        : 'bg-white text-gray-900 border border-gray-200 rounded-bl-md shadow-sm'
                     } ${
                       !isLastInGroup
                         ? isCurrentUserMessage
@@ -197,20 +200,20 @@ export function MessageList({
                     </p>
                   </div>
                   
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5 mt-1 px-1">
+                    <span className="text-xs text-gray-500">
                       {formatTime(msg.sentAt)}
                     </span>
                     {isCurrentUserMessage && (
-                      <span className="text-muted-foreground">
+                      <span className="flex items-center">
                         {msg.isOptimistic ? (
-                          <div className="h-3.5 w-3.5 border border-current rounded-full animate-pulse" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
                         ) : msg.readAt ? (
-                          <CheckCheck className="h-3.5 w-3.5 text-primary" />
+                          <CheckCheck className="h-4 w-4 text-palero-blue1" />
                         ) : msg.deliveredAt ? (
-                          <CheckCheck className="h-3.5 w-3.5" />
+                          <CheckCheck className="h-4 w-4 text-gray-400" />
                         ) : (
-                          <Check className="h-3.5 w-3.5" />
+                          <Check className="h-4 w-4 text-gray-400" />
                         )}
                       </span>
                     )}
@@ -224,6 +227,6 @@ export function MessageList({
         {/* Referencia para auto-scroll */}
         <div ref={messagesEndRef} />
       </div>
-    </ScrollArea>
+    </div>
   );
 }

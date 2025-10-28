@@ -1,8 +1,7 @@
 import React from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, MessageSquarePlus, Loader2 } from 'lucide-react';
+import { Search, Plus, Loader2 } from 'lucide-react';
 import { ConversationWithParticipant } from '@/lib/api';
 import { ConversationListItem } from './ConversationListItem';
 import { EmptyState } from './EmptyState';
@@ -37,38 +36,42 @@ export function ConversationList({
   if (loading && conversations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-        <p className="text-sm text-muted-foreground">Cargando conversaciones...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-palero-teal1 mb-4" />
+        <p className="text-sm text-gray-600">Cargando conversaciones...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Mensajes</h2>
-          <Button onClick={onNewChat} size="sm" className="gap-2">
-            <MessageSquarePlus className="h-4 w-4" />
-            Nuevo
+          <h2 className="text-lg font-semibold text-gray-900">Mensajes</h2>
+          <Button 
+            onClick={onNewChat} 
+            size="sm" 
+            className="gap-2 bg-palero-teal1 hover:bg-palero-teal2 text-white"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Nuevo</span>
           </Button>
         </div>
 
         {/* Buscador */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground transform -translate-y-1/2" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 text-gray-400 transform -translate-y-1/2" />
           <Input
-            placeholder="Buscar conversaciones..."
+            placeholder="Buscar..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 border-gray-300 focus:border-palero-teal1 focus:ring-palero-teal1"
           />
         </div>
       </div>
 
-      {/* Lista de conversaciones */}
-      <ScrollArea className="flex-1">
+      {/* Lista de conversaciones con scroll nativo */}
+      <div className="flex-1 overflow-y-auto">
         {filteredConversations.length === 0 ? (
           <div className="p-4">
             {searchQuery ? (
@@ -81,7 +84,7 @@ export function ConversationList({
             )}
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-gray-100">
             {filteredConversations.map((conversation) => (
               <ConversationListItem
                 key={conversation.id}
@@ -92,7 +95,7 @@ export function ConversationList({
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
