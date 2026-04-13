@@ -1,5 +1,6 @@
 {
-  "display_override": ["window-controls-overlay"], 
+  "id": "com.palerosoft.app",
+  "display_override": ["window-controls-overlay"],
   "name": "PaleroSoft - Gestión de Proyectos",
   "short_name": "PaleroSoft",
   "description": "Plataforma completa de gestión de proyectos, tareas, reuniones y comunicación para equipos",
@@ -44,11 +45,6 @@
   ],
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "32x32",
-      "type": "image/x-icon"
-    },
-     {
       "src": "icons/icon-48x48.png",
       "sizes": "48x48",
       "type": "image/png"
