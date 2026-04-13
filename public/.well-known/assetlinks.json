@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.palerosoft.app",
+        "sha256_cert_fingerprints": ["FD:8A:22:90:FE:4F:06:BD:23:CE:DE:74:83:8B:35:51:7C:7A:7C:EF:5E:F9:26:A0:2E:77:E6:76:9C:7D:42:C5"]
+      }
+    }]
