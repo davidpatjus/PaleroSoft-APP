@@ -132,6 +132,7 @@ const EditInvoicePage = () => {
       ...data,
       items: data.items.map(item => ({
         ...item,
+        description: item.description || '',
         quantity: String(item.quantity),
         unitPrice: String(item.unitPrice),
       })),
